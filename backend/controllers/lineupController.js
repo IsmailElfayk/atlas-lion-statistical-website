@@ -1,6 +1,5 @@
 const { getWindowScores } = require('../services/ratingService');
 const { optimize } = require('../services/lineupService');
-const { ok, fail } = require('../utils/apiResponse');
 const { getRedis } = require('../config/redis');
 
 async function getBestXI(req, res) {
@@ -19,7 +18,7 @@ async function getBestXI(req, res) {
   if (redis) {
     try {
       const cached = await redis.get(cacheKey);
-      if (cached) return res.json(JSON.parse(cached));
+      if (cached !== null) return res.json(cached);
     } catch { /* skip */ }
   }
 
@@ -39,7 +38,7 @@ async function getBestXI(req, res) {
     error: null,
   };
 
-  if (redis) redis.setEx(cacheKey, 3600, JSON.stringify(response)).catch(() => {});
+  if (redis) redis.set(cacheKey, response, { ex: 3600 }).catch(() => {});
   res.json(response);
 }
 

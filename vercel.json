@@ -1,12 +1,14 @@
 {
   "version": 2,
+  "buildCommand": "npm run vercel-build",
   "builds": [
-    { "src": "frontend/dist/**", "use": "@vercel/static" },
-    { "src": "backend/server.js", "use": "@vercel/node" }
+    { "src": "backend/server.js", "use": "@vercel/node" },
+    { "src": "frontend/dist/**", "use": "@vercel/static" }
   ],
   "routes": [
     { "src": "/api/(.*)", "dest": "backend/server.js" },
-    { "src": "/(.*)", "dest": "frontend/dist/$1" }
+    { "src": "/assets/(.*)", "dest": "frontend/dist/assets/$1" },
+    { "src": "/(.*)", "dest": "frontend/dist/index.html" }
   ],
   "functions": {
     "backend/server.js": { "maxDuration": 30 }

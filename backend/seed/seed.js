@@ -173,56 +173,64 @@ async function seed() {
   players.forEach((p, i) => { playerMap[p.slug] = { ...p.toObject(), baseRating: PLAYERS_DATA[i].rating, dataQ: PLAYERS_DATA[i].dataQ }; });
   console.log(`[Seed] ${players.length} players`);
 
-  // Matches
-  const matchDates = [];
-  for (let i = 90; i >= 0; i--) {
+  // Build match dates: every 3-4 days over the past 90 days + upcoming fixtures
+  const pastMatchDays = [];
+  for (let i = 90; i >= 1; i--) {
     const d = new Date(now); d.setDate(d.getDate() - i);
-    if (i % 7 === 0 || i % 7 === 3) matchDates.push({ date: d, status: i > 0 ? 'finished' : 'scheduled' });
-  }
-  // Add upcoming
-  for (let i = 1; i <= 14; i++) {
-    const d = new Date(now); d.setDate(d.getDate() + i);
-    if (i % 4 === 0) matchDates.push({ date: d, status: 'scheduled' });
+    if (i % 7 === 0 || i % 7 === 3) pastMatchDays.push({ date: d, daysAgo: i });
   }
 
-  const allLeagues = leagues.filter(l => l.bucket !== 'world');
+  const nonWorldLeagues = leagues.filter(l => l.bucket !== 'world');
   const allClubs = clubs.filter(c => c.name !== 'Morocco NT');
-  const matchesData = matchDates.slice(0, 20).map((md, i) => {
-    const league = allLeagues[i % allLeagues.length];
-    const c1 = allClubs[i % allClubs.length];
-    const c2 = allClubs[(i + 3) % allClubs.length];
-    const homeScore = md.status === 'finished' ? Math.floor(Math.random() * 4) : undefined;
-    const awayScore = md.status === 'finished' ? Math.floor(Math.random() * 3) : undefined;
-    return {
-      league: league._id,
-      season: '2025-26',
-      kickoffUtc: md.date,
-      homeClub: c1._id,
-      awayClub: c2._id,
-      homeScore,
-      awayScore,
-      status: md.status,
-      competition: league.name + ' · Round ' + (i + 1),
-      moroccansPlaying: players.slice(i % players.length, (i % players.length) + 3).map(p => p._id),
-    };
+
+  // Build a league→clubs map for realistic home/away assignment
+  const leagueClubsMap = {};
+  allClubs.forEach(c => {
+    const lid = c.league.toString();
+    if (!leagueClubsMap[lid]) leagueClubsMap[lid] = [];
+    leagueClubsMap[lid].push(c);
   });
 
-  // Add specific fixtures from the design
+  // Create one match per (date × league) so every league has coverage in every window
+  const matchesData = [];
+  let roundNum = 1;
+  pastMatchDays.forEach(md => {
+    nonWorldLeagues.forEach(league => {
+      const lclubs = leagueClubsMap[league._id.toString()] || allClubs;
+      const c1 = lclubs[roundNum % lclubs.length];
+      const c2 = lclubs[(roundNum + 1) % lclubs.length] || lclubs[0];
+      matchesData.push({
+        league: league._id,
+        season: '2025-26',
+        kickoffUtc: md.date,
+        homeClub: c1._id,
+        awayClub: c2._id,
+        homeScore: Math.floor(Math.random() * 4),
+        awayScore: Math.floor(Math.random() * 3),
+        status: 'finished',
+        competition: `${league.name} · Round ${roundNum}`,
+        moroccansPlaying: [],
+      });
+    });
+    roundNum++;
+  });
+
+  // Add upcoming fixtures
   const designFixtures = [
-    { date: new Date('2026-05-30T21:00:00Z'), competition: 'CAF Champions League Final', status: 'scheduled', homeClubName: 'Wydad AC', awayClubName: 'Al-Ain' },
-    { date: new Date('2026-06-02T20:00:00Z'), competition: 'FIFA Friendly', status: 'scheduled', homeClubName: 'Morocco NT', awayClubName: 'Morocco NT' },
-    { date: new Date('2026-06-06T20:30:00Z'), competition: 'AFCON Qualifier', status: 'scheduled', homeClubName: 'Morocco NT', awayClubName: 'Morocco NT' },
-    { date: new Date('2026-06-10T19:00:00Z'), competition: 'Botola Pro · MD 30', status: 'scheduled', homeClubName: 'Raja CA', awayClubName: 'AS FAR' },
+    { date: new Date('2026-05-30T21:00:00Z'), competition: 'CAF Champions League Final', homeClubName: 'Wydad AC', awayClubName: 'Al-Ain' },
+    { date: new Date('2026-06-02T20:00:00Z'), competition: 'FIFA Friendly', homeClubName: 'Morocco NT', awayClubName: 'Morocco NT' },
+    { date: new Date('2026-06-06T20:30:00Z'), competition: 'AFCON Qualifier', homeClubName: 'Morocco NT', awayClubName: 'Morocco NT' },
+    { date: new Date('2026-06-10T19:00:00Z'), competition: 'Botola Pro · MD 30', homeClubName: 'Raja CA', awayClubName: 'AS FAR' },
   ];
+  const intl = leagueMap['International'];
   designFixtures.forEach(f => {
-    const intl = leagueMap['International'];
     matchesData.push({
       league: intl?._id,
       season: '2025-26',
       kickoffUtc: f.date,
       homeClub: clubMap[f.homeClubName]?._id || allClubs[0]._id,
       awayClub: clubMap[f.awayClubName]?._id || allClubs[1]._id,
-      status: f.status,
+      status: 'scheduled',
       competition: f.competition,
       moroccansPlaying: players.slice(0, 5).map(p => p._id),
     });
@@ -231,15 +239,43 @@ async function seed() {
   const matches = await Match.insertMany(matchesData);
   console.log(`[Seed] ${matches.length} matches`);
 
-  // Ratings — one per player per finished match they "played"
-  const finishedMatches = matches.filter(m => m.status === 'finished');
+  // Build league→finished matches sorted by date for closest-match lookup
+  const leagueMatchesByDate = {};
+  matches.filter(m => m.status === 'finished').forEach(m => {
+    const lid = m.league.toString();
+    if (!leagueMatchesByDate[lid]) leagueMatchesByDate[lid] = [];
+    leagueMatchesByDate[lid].push(m);
+  });
+  Object.values(leagueMatchesByDate).forEach(arr =>
+    arr.sort((a, b) => new Date(a.kickoffUtc) - new Date(b.kickoffUtc))
+  );
+
+  function closestMatch(leagueId, ratingDate) {
+    const arr = leagueMatchesByDate[leagueId.toString()] || [];
+    if (!arr.length) return null;
+    let best = arr[0];
+    let minDiff = Math.abs(new Date(arr[0].kickoffUtc) - ratingDate);
+    for (const m of arr) {
+      const diff = Math.abs(new Date(m.kickoffUtc) - ratingDate);
+      if (diff < minDiff) { minDiff = diff; best = m; }
+    }
+    return best;
+  }
+
+  // Ratings: each rating maps to the closest match in the player's own league
   const ratingDocs = [];
+  const seen = new Set();
   for (const p of players) {
     const pd = playerMap[p.slug];
+    const club = clubs.find(c => c._id.toString() === p.currentClub.toString());
+    const leagueId = club?.league;
     const ratingHistory = genRatings(pd.baseRating, 90, pd.dataQ);
-    ratingHistory.forEach((r, idx) => {
-      const match = finishedMatches[idx % finishedMatches.length];
-      if (!match) return;
+    for (const r of ratingHistory) {
+      const match = leagueId ? closestMatch(leagueId, r.date) : null;
+      if (!match) continue;
+      const key = `${p._id}-${match._id}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
       ratingDocs.push({
         player: p._id,
         match: match._id,
@@ -249,18 +285,10 @@ async function seed() {
         normalisedCustom: r.normalisedCustom,
         dataQuality: r.dataQuality,
       });
-    });
+    }
   }
-  // Deduplicate player+match combos
-  const seen = new Set();
-  const uniqueRatings = ratingDocs.filter(r => {
-    const key = `${r.player}-${r.match}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-  await Rating.insertMany(uniqueRatings);
-  console.log(`[Seed] ${uniqueRatings.length} ratings`);
+  await Rating.insertMany(ratingDocs);
+  console.log(`[Seed] ${ratingDocs.length} ratings`);
 
   console.log('[Seed] Done!');
   process.exit(0);

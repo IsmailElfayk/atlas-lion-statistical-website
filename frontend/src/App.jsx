@@ -7,6 +7,7 @@ import BestXIPage from './pages/BestXIPage.jsx';
 import PlayersPage from './pages/PlayersPage.jsx';
 import PlayerDetailPage from './pages/PlayerDetailPage.jsx';
 import FixturesPage from './pages/FixturesPage.jsx';
+import StatsPage from './pages/StatsPage.jsx';
 import ComparePage from './pages/ComparePage.jsx';
 import MethodologyPage from './pages/MethodologyPage.jsx';
 import NotFoundPage from './pages/NotFoundPage.jsx';
@@ -21,6 +22,7 @@ export default function App() {
   else if (path === '/players') Page = PlayersPage;
   else if (path.startsWith('/players/')) Page = PlayerDetailPage;
   else if (path === '/fixtures') Page = FixturesPage;
+  else if (path === '/stats') Page = StatsPage;
   else if (path === '/compare') Page = ComparePage;
   else if (path === '/methodology') Page = MethodologyPage;
 

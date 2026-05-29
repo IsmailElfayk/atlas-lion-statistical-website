@@ -19,6 +19,7 @@ function CommandPalette({ open, onClose }) {
   const PAGES = [
     {label:'Best XI',to:'/best-xi',hint:'Lineup builder'},
     {label:'Fixtures',to:'/fixtures',hint:'Match centre'},
+    {label:'Stats',to:'/stats',hint:'NT dashboard'},
     {label:'Compare',to:'/compare',hint:'Player comparison'},
     {label:'Methodology',to:'/methodology',hint:'How we rate'},
   ];
@@ -121,7 +122,7 @@ export default function Navbar() {
 
   const links = [
     {to:'/',label:t('nav.home')},{to:'/best-xi',label:t('nav.bestxi')},{to:'/players',label:t('nav.players')},
-    {to:'/fixtures',label:t('nav.fixtures')},{to:'/compare',label:t('nav.compare')},{to:'/methodology',label:t('nav.methodology')},
+    {to:'/fixtures',label:t('nav.fixtures')},{to:'/stats',label:'Stats'},{to:'/compare',label:t('nav.compare')},{to:'/methodology',label:t('nav.methodology')},
   ];
   const isActive = to => to==='/'?path==='/':path.startsWith(to);
 

@@ -2,7 +2,30 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { useT } from '../context/LanguageContext.jsx';
 import { Button, Card, Checkbox, Slider, Spinner } from '../components/ui/index.jsx';
 import { PitchView, SubstitutesList } from '../components/bestxi/PitchView.jsx';
-import { PLAYERS, FORMATIONS, POS_TO_SLOTS, buildBestXI, statusMeta, fmtDate } from '../data.js';
+import { getBestXI } from '../api/index.js';
+
+// Slot coordinates for mini formation preview cards
+const FORMATION_COORDS = {
+  '4-3-3':   [{x:340,y:430},{x:120,y:340},{x:260,y:355},{x:420,y:355},{x:560,y:340},{x:200,y:240},{x:340,y:255},{x:480,y:240},{x:140,y:120},{x:340,y:90},{x:540,y:120}],
+  '4-4-2':   [{x:340,y:430},{x:120,y:340},{x:260,y:355},{x:420,y:355},{x:560,y:340},{x:130,y:230},{x:270,y:250},{x:410,y:250},{x:550,y:230},{x:260,y:110},{x:420,y:110}],
+  '4-2-3-1': [{x:340,y:430},{x:120,y:340},{x:260,y:355},{x:420,y:355},{x:560,y:340},{x:260,y:260},{x:420,y:260},{x:140,y:160},{x:340,y:180},{x:540,y:160},{x:340,y:80}],
+  '3-5-2':   [{x:340,y:430},{x:180,y:355},{x:340,y:360},{x:500,y:355},{x:90,y:250},{x:230,y:260},{x:340,y:280},{x:450,y:260},{x:590,y:250},{x:260,y:110},{x:420,y:110}],
+  '3-4-3':   [{x:340,y:430},{x:180,y:355},{x:340,y:360},{x:500,y:355},{x:90,y:255},{x:260,y:260},{x:420,y:260},{x:590,y:255},{x:160,y:120},{x:340,y:90},{x:520,y:120}],
+  '5-4-1':   [{x:340,y:430},{x:90,y:340},{x:220,y:360},{x:340,y:365},{x:460,y:360},{x:590,y:340},{x:140,y:240},{x:270,y:260},{x:410,y:260},{x:540,y:240},{x:340,y:100}],
+  '5-3-2':   [{x:340,y:430},{x:80,y:330},{x:215,y:360},{x:340,y:365},{x:465,y:360},{x:600,y:330},{x:230,y:240},{x:340,y:258},{x:450,y:240},{x:265,y:105},{x:415,y:105}],
+  '4-1-4-1': [{x:340,y:430},{x:120,y:345},{x:260,y:358},{x:420,y:358},{x:560,y:345},{x:340,y:285},{x:120,y:185},{x:270,y:200},{x:410,y:200},{x:560,y:185},{x:340,y:90}],
+};
+const FORMATION_NAMES = Object.keys(FORMATION_COORDS);
+const ALL_BUCKETS = ['big5','other_europe','botola','mena','americas','world'];
+
+function statusMeta(status) {
+  const map = {
+    doubtful:  { label:'Doubtful',   color:'var(--color-gold)' },
+    injured:   { label:'Injured',    color:'#E05252' },
+    suspended: { label:'Suspended',  color:'#E05252' },
+  };
+  return map[status] || { label: status || 'Unknown', color: 'var(--color-text-secondary)' };
+}
 
 const miniLinkStyle = {
   background:'transparent', border:0, cursor:'pointer', padding:0,
@@ -11,7 +34,7 @@ const miniLinkStyle = {
 };
 
 function FormationCard({ formation, active, onClick }) {
-  const slots = FORMATIONS[formation];
+  const slots = FORMATION_COORDS[formation] || [];
   return (
     <button onClick={onClick} style={{
       padding:'10px 6px 8px', border:`1.5px solid ${active ? 'var(--color-red)' : 'var(--color-border)'}`,
@@ -55,8 +78,6 @@ function Detail({ label, value, mono = true }) {
   );
 }
 
-const ALL_BUCKETS = ['big5','other_europe','botola','mena','americas','world'];
-
 export default function BestXIPage() {
   const { t } = useT();
   const [formation, setFormation] = useState('4-3-3');
@@ -67,28 +88,52 @@ export default function BestXIPage() {
   const [activeSlot, setActiveSlot] = useState(null);
   const [loading, setLoading] = useState(false);
   const [seed, setSeed] = useState(0);
+  const [apiResult, setApiResult] = useState(null);
   const [lineup, setLineup] = useState(null);
   const [exporting, setExporting] = useState(false);
   const exportRef = useRef(null);
 
-  const pool = useMemo(() => {
-    return PLAYERS.filter(p => buckets.includes(p.bucket) && p.minutes >= minMinutes);
-  }, [buckets, minMinutes, seed]);
+  // Fetch from API whenever any parameter changes
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setActiveSlot(null);
 
-  const baseXI = useMemo(() => buildBestXI(formation, pool), [formation, pool, seed]);
+    getBestXI({
+      formation,
+      window: window_,
+      buckets: buckets.join(','),
+      ratingMethod: method,
+      minMinutes,
+    })
+      .then(res => {
+        if (!cancelled) {
+          setApiResult(res.data);
+          setLineup(null);
+          setLoading(false);
+        }
+      })
+      .catch(err => {
+        if (!cancelled) {
+          console.error('[Atlas] getBestXI error', err);
+          setLoading(false);
+        }
+      });
 
-  useEffect(() => { setLineup(baseXI.map(s => ({ ...s }))); setActiveSlot(null); }, [baseXI]);
+    return () => { cancelled = true; };
+  }, [formation, window_, buckets, method, minMinutes, seed]);
 
+  const baseXI = apiResult?.data?.startingXI || [];
   const xi = lineup || baseXI;
 
-  const edited = useMemo(() => lineup && lineup.some((s, i) => s.player?.id !== baseXI[i]?.player?.id), [lineup, baseXI]);
+  const edited = useMemo(() => {
+    if (!lineup || !baseXI.length) return false;
+    return lineup.some((s, i) => (s.player?.slug ?? null) !== (baseXI[i]?.player?.slug ?? null));
+  }, [lineup, baseXI]);
 
-  const regenerate = () => {
-    setLoading(true); setActiveSlot(null);
-    setTimeout(() => { setSeed(s => s + 1); setLoading(false); }, 700);
-  };
+  const regenerate = () => setSeed(s => s + 1);
 
-  const autoFill = () => { setLineup(baseXI.map(s => ({ ...s }))); setActiveSlot(null); };
+  const autoFill = () => { setLineup(null); setActiveSlot(null); };
 
   const exportPNG = async () => {
     if (!exportRef.current) return;
@@ -115,7 +160,7 @@ export default function BestXIPage() {
     if (activeSlot == null) return;
     setLineup(prev => {
       const cur = (prev || baseXI).map(s => ({ ...s }));
-      const existingIdx = cur.findIndex(s => s.player?.id === newPlayer.id);
+      const existingIdx = cur.findIndex(s => s.player?.slug === newPlayer.slug);
       const displaced = cur[activeSlot].player;
       cur[activeSlot] = { ...cur[activeSlot], player: newPlayer };
       if (existingIdx >= 0 && existingIdx !== activeSlot) {
@@ -127,26 +172,26 @@ export default function BestXIPage() {
 
   const heuristicWarning = method === 'custom' && (buckets.includes('botola') || buckets.includes('mena'));
 
+  // Subs come from the API's original slot data; filter out whoever is currently the starter
   const activeSlotData = useMemo(() => {
-    if (activeSlot == null) return null;
+    if (activeSlot == null || !xi.length) return null;
     const base = xi[activeSlot];
-    const usedIds = new Set(xi.filter(x => x.player).map(x => x.player.id));
-    const subs = pool
-      .filter(p => POS_TO_SLOTS[p.pos]?.includes(base.slot) && p.id !== base.player?.id && !usedIds.has(p.id))
-      .sort((a, b) => {
-        const aOut = a.status && a.status !== 'available' ? 1 : 0;
-        const bOut = b.status && b.status !== 'available' ? 1 : 0;
-        if (aOut !== bOut) return aOut - bOut;
-        return b.rating - a.rating;
-      })
-      .slice(0, 9);
+    const originalSubs = apiResult?.data?.startingXI?.[activeSlot]?.subs || [];
+    const currentStarterId = base.player?.slug;
+    const subs = originalSubs.filter(p => p.slug !== currentStarterId);
     return { ...base, subs };
-  }, [activeSlot, xi, pool]);
+  }, [activeSlot, xi, apiResult]);
 
-  const unavailableStarters = useMemo(() => xi.filter(s => s.player && s.player.status && s.player.status !== 'available'), [xi]);
+  const unavailableStarters = useMemo(
+    () => xi.filter(s => s.player?.status && s.player.status !== 'available'),
+    [xi]
+  );
 
-  const meanRating = (xi.reduce((s, x) => s + (x.player?.rating || 0), 0) / 11).toFixed(2);
-  const eventCount = xi.filter(x => x.player?.dataQ === 'event').length;
+  const meanRating = xi.length
+    ? (xi.reduce((s, x) => s + (x.player?.avgRating || 0), 0) / 11).toFixed(2)
+    : '—';
+  const eventCount = xi.filter(x => x.player?.dataQuality === 'event').length;
+  const candidateCount = apiResult?.meta?.candidateCount ?? '—';
 
   return (
     <div className="fade-up">
@@ -154,7 +199,7 @@ export default function BestXIPage() {
         <div className="eyebrow" style={{ marginBottom:6, color:'var(--color-red)' }}>The Flagship</div>
         <h1 style={{ fontSize:56, lineHeight:1, marginBottom:12 }}>BUILD THE BEST XI</h1>
         <p style={{ fontSize:15, color:'var(--color-text-secondary)', maxWidth:680 }}>
-          Pick a formation, a window, and which leagues count. The Hungarian-style optimiser fills each position with the highest-rated eligible player. <strong style={{ color:'var(--color-text-primary)' }}>Click any slot to swap in a substitute</strong> — the pitch updates live, and Auto-fill restores the optimal XI.
+          Pick a formation, a window, and which leagues count. The optimiser fills each position with the highest-rated eligible player. <strong style={{ color:'var(--color-text-primary)' }}>Click any slot to swap in a substitute</strong> — the pitch updates live, and Auto-fill restores the optimal XI.
         </p>
       </div>
 
@@ -165,7 +210,7 @@ export default function BestXIPage() {
           <Card padding={18}>
             <div className="eyebrow" style={{ marginBottom:12 }}>{t('bestxi.formation')}</div>
             <div style={{ display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:8 }}>
-              {Object.keys(FORMATIONS).map(f => (
+              {FORMATION_NAMES.map(f => (
                 <FormationCard key={f} formation={f} active={formation === f} onClick={() => setFormation(f)}/>
               ))}
             </div>
@@ -252,11 +297,11 @@ export default function BestXIPage() {
               <div style={{ flex:1, fontSize:13, color:'var(--color-text-primary)', lineHeight:1.5 }}>
                 {unavailableStarters.map((s, i) => {
                   const meta = statusMeta(s.player.status);
+                  const lastName = (s.player.fullName || s.player.name || '').split(' ').slice(-1)[0];
                   return (
-                    <span key={s.player.id}>
+                    <span key={s.player.slug || i}>
                       {i > 0 && <span style={{ color:'var(--color-text-tertiary)' }}> · </span>}
-                      <strong>{s.player.name.split(' ').slice(-1)[0]}</strong> ({s.slot}) is {meta.label.toLowerCase()}
-                      {s.player.returnDate && <span style={{ color:'var(--color-text-secondary)' }}> — back {fmtDate(s.player.returnDate)}</span>}
+                      <strong>{lastName}</strong> ({s.slot}) is {meta.label.toLowerCase()}
                     </span>
                   );
                 })}
@@ -271,7 +316,7 @@ export default function BestXIPage() {
                 <div>
                   <div className="eyebrow">{edited ? 'Manually edited' : 'Optimised'}</div>
                   <div style={{ fontFamily:'var(--font-display)', fontSize:22, letterSpacing:'0.02em', display:'flex', alignItems:'center', gap:10 }}>
-                    {formation} · {window_}D · {pool.length} ELIGIBLE
+                    {formation} · {window_}D · {candidateCount} ELIGIBLE
                     {edited && <span style={{ fontFamily:'var(--font-mono)', fontSize:10, fontWeight:600, letterSpacing:'0.1em', color:'var(--color-gold)', background:'var(--color-gold-soft)', border:'1px solid rgba(212,175,55,0.4)', padding:'2px 7px', borderRadius:4 }}>EDITED</span>}
                   </div>
                 </div>
@@ -302,7 +347,7 @@ export default function BestXIPage() {
                 <Detail label="Method" value={method === 'commercial' ? 'Sofascore' : 'xT/VAEP'}/>
                 <Detail label="Min minutes" value={`${minMinutes}′`}/>
                 <Detail label="Buckets" value={buckets.join(', ')} mono={false}/>
-                <Detail label="Pool size" value={`${pool.length} players`}/>
+                <Detail label="Pool size" value={`${candidateCount} players`}/>
                 <Detail label="Mean rating" value={meanRating}/>
                 <Detail label="Data quality" value={`${eventCount}/11 event`}/>
               </div>
