@@ -7,15 +7,17 @@ function cacheMiddleware(ttl = 3600) {
     const key = `cache:${req.originalUrl}`;
     try {
       const cached = await redis.get(key);
-      if (cached) {
+      if (cached !== null) {
         res.setHeader('X-Cache', 'HIT');
-        return res.json(JSON.parse(cached));
+        // Upstash auto-deserialises — cached is already an object
+        return res.json(cached);
       }
     } catch { /* skip on error */ }
 
     const origJson = res.json.bind(res);
     res.json = (body) => {
-      redis.setEx(key, ttl, JSON.stringify(body)).catch(() => {});
+      // Upstash uses set(key, value, { ex: ttl }) — not setEx
+      redis.set(key, body, { ex: ttl }).catch(() => {});
       res.setHeader('X-Cache', 'MISS');
       return origJson(body);
     };

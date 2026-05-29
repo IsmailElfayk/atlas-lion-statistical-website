@@ -1,23 +1,20 @@
-const { createClient } = require('redis');
+const { Redis } = require('@upstash/redis');
 
-let client = null;
+let redis = null;
 
-async function connectRedis() {
-  const url = process.env.REDIS_URL || 'redis://localhost:6379';
-  client = createClient({
-    url,
-    socket: { reconnectStrategy: (retries) => { if (retries >= 1) { client = null; return new Error('Redis unavailable'); } return 500; } },
+if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+  redis = new Redis({
+    url: process.env.UPSTASH_REDIS_REST_URL,
+    token: process.env.UPSTASH_REDIS_REST_TOKEN,
   });
-  client.on('error', () => {});
-  try {
-    await client.connect();
-    console.log('[Redis] Connected to', url);
-  } catch {
-    console.warn('[Redis] Unavailable — caching disabled');
-    client = null;
-  }
+  console.log('[Redis] Upstash client initialised');
+} else {
+  console.warn('[Redis] Upstash env vars not set — caching disabled');
 }
 
-function getRedis() { return client; }
+// No-op kept so server.js doesn't need changes to its startup sequence
+async function connectRedis() {}
+
+function getRedis() { return redis; }
 
 module.exports = { connectRedis, getRedis };

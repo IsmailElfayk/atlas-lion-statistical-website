@@ -119,7 +119,7 @@ function genRatings(baseRating, days, dataQ) {
 }
 
 async function seed() {
-  const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/atlas-lions';
+  const MONGODB_URI = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/atlas-lions';
   await mongoose.connect(MONGODB_URI);
   console.log('[Seed] Connected to MongoDB');
 
