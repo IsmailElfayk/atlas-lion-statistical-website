@@ -18,13 +18,13 @@ const FORMATION_COORDS = {
 const FORMATION_NAMES = Object.keys(FORMATION_COORDS);
 const ALL_BUCKETS = ['big5','other_europe','botola','mena','americas','world'];
 
-function statusMeta(status) {
+function statusMeta(status, t) {
   const map = {
-    doubtful:  { label:'Doubtful',   color:'var(--color-gold)' },
-    injured:   { label:'Injured',    color:'#E05252' },
-    suspended: { label:'Suspended',  color:'#E05252' },
+    doubtful:  { label: t('bestxi.status_doubtful'),  color:'var(--color-gold)' },
+    injured:   { label: t('bestxi.status_injured'),   color:'#E05252' },
+    suspended: { label: t('bestxi.status_suspended'), color:'#E05252' },
   };
-  return map[status] || { label: status || 'Unknown', color: 'var(--color-text-secondary)' };
+  return map[status] || { label: t('bestxi.status_unknown'), color: 'var(--color-text-secondary)' };
 }
 
 const miniLinkStyle = {
@@ -143,7 +143,7 @@ export default function BestXIPage() {
       const node = exportRef.current;
       node.style.display = 'block';
       await new Promise(r => setTimeout(r, 120));
-      const dataUrl = await toPng(node, { pixelRatio:2, backgroundColor:'#0D0F0E', cacheBust:true });
+      const dataUrl = await toPng(node, { pixelRatio:2, backgroundColor:'#0D0F0E', cacheBust:true, skipFonts:true });
       node.style.display = 'none';
       const a = document.createElement('a');
       a.download = `atlas-lions-best-xi-${formation}-${window_}d.png`;
@@ -196,10 +196,10 @@ export default function BestXIPage() {
   return (
     <div className="fade-up">
       <div style={{ marginBottom:28 }}>
-        <div className="eyebrow" style={{ marginBottom:6, color:'var(--color-red)' }}>The Flagship</div>
-        <h1 style={{ fontSize:56, lineHeight:1, marginBottom:12 }}>BUILD THE BEST XI</h1>
+        <div className="eyebrow" style={{ marginBottom:6, color:'var(--color-red)' }}>{t('bestxi.flagship')}</div>
+        <h1 style={{ fontSize:56, lineHeight:1, marginBottom:12 }}>{t('bestxi.page_title')}</h1>
         <p style={{ fontSize:15, color:'var(--color-text-secondary)', maxWidth:680 }}>
-          Pick a formation, a window, and which leagues count. The optimiser fills each position with the highest-rated eligible player. <strong style={{ color:'var(--color-text-primary)' }}>Click any slot to swap in a substitute</strong> — the pitch updates live, and Auto-fill restores the optimal XI.
+          {t('bestxi.description')}
         </p>
       </div>
 
@@ -228,7 +228,7 @@ export default function BestXIPage() {
                 }}>
                   <div style={{ fontFamily:'var(--font-display)', fontSize:22, letterSpacing:'0.01em' }}>{d}</div>
                   <div style={{ fontSize:9, color: window_ === d ? 'rgba(255,255,255,0.85)' : 'var(--color-text-tertiary)', fontFamily:'var(--font-mono)', letterSpacing:'0.08em', textTransform:'uppercase', marginTop:1 }}>
-                    {d <= 15 ? '2 MW' : d <= 30 ? '1 MONTH' : d <= 60 ? '2 MONTHS' : '3 MONTHS'}
+                    {d <= 15 ? t('bestxi.window_2mw') : d <= 30 ? t('bestxi.window_1mo') : d <= 60 ? t('bestxi.window_2mo') : t('bestxi.window_3mo')}
                   </div>
                 </button>
               ))}
@@ -239,9 +239,9 @@ export default function BestXIPage() {
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12 }}>
               <div className="eyebrow">{t('bestxi.league_filter')}</div>
               <div style={{ display:'flex', gap:6 }}>
-                <button onClick={() => setBuckets([...ALL_BUCKETS])} style={miniLinkStyle}>All</button>
+                <button onClick={() => setBuckets([...ALL_BUCKETS])} style={miniLinkStyle}>{t('bestxi.bucket_all')}</button>
                 <span style={{ color:'var(--color-border-2)' }}>·</span>
-                <button onClick={() => setBuckets(['big5'])} style={miniLinkStyle}>Clear</button>
+                <button onClick={() => setBuckets(['big5'])} style={miniLinkStyle}>{t('bestxi.bucket_clear')}</button>
               </div>
             </div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
@@ -269,23 +269,23 @@ export default function BestXIPage() {
           <Card padding={18}>
             <div className="eyebrow" style={{ marginBottom:12 }}>{t('bestxi.rating_method')}</div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-              <MethodOption active={method === 'commercial'} onClick={() => setMethod('commercial')} title="Commercial" subtitle="Sofascore — 200+ leagues"/>
-              <MethodOption active={method === 'custom'} onClick={() => setMethod('custom')} title="Custom xT/VAEP" subtitle="Event data — Big 5 + SPL"/>
+              <MethodOption active={method === 'commercial'} onClick={() => setMethod('commercial')} title={t('bestxi.method_commercial_title')} subtitle={t('bestxi.method_commercial_sub')}/>
+              <MethodOption active={method === 'custom'} onClick={() => setMethod('custom')} title={t('bestxi.method_custom_title')} subtitle={t('bestxi.method_custom_sub')}/>
             </div>
             {heuristicWarning && (
               <div style={{ marginTop:12, padding:'10px 12px', background:'var(--color-gold-soft)', border:'1px solid rgba(212,175,55,0.35)', borderRadius:6, fontSize:11.5, color:'#E2C24A', lineHeight:1.5 }}>
-                <strong>⚡ Heads-up:</strong> Custom ratings unavailable for Botola/MENA — heuristic scores shown instead.
+                <strong>⚡</strong> {t('bestxi.heuristic_warning')}
               </div>
             )}
           </Card>
 
           <Card padding={18}>
             <Slider min={45} max={180} step={45} value={minMinutes} onChange={setMinMinutes} label={t('bestxi.min_minutes')} unit="′"/>
-            <div style={{ fontSize:11, color:'var(--color-text-tertiary)', marginTop:6 }}>Players with fewer minutes in the window are excluded.</div>
+            <div style={{ fontSize:11, color:'var(--color-text-tertiary)', marginTop:6 }}>{t('bestxi.min_minutes_note')}</div>
           </Card>
 
           <Button variant="primary" size="lg" loading={loading} onClick={regenerate} style={{ width:'100%' }}>
-            {loading ? 'Optimising…' : t('bestxi.generate')}
+            {loading ? t('bestxi.optimising') : t('bestxi.generate')}
           </Button>
         </div>
 
@@ -296,16 +296,17 @@ export default function BestXIPage() {
               <span style={{ fontSize:18 }}>⚠</span>
               <div style={{ flex:1, fontSize:13, color:'var(--color-text-primary)', lineHeight:1.5 }}>
                 {unavailableStarters.map((s, i) => {
-                  const meta = statusMeta(s.player.status);
+                  const meta = statusMeta(s.player.status, t);
                   const lastName = (s.player.fullName || s.player.name || '').split(' ').slice(-1)[0];
                   return (
                     <span key={s.player.slug || i}>
                       {i > 0 && <span style={{ color:'var(--color-text-tertiary)' }}> · </span>}
-                      <strong>{lastName}</strong> ({s.slot}) is {meta.label.toLowerCase()}
+                      <strong>{lastName}</strong>{' '}
+                      {t('bestxi.player_status_alert').replace('{slot}', s.slot).replace('{status}', meta.label.toLowerCase())}
                     </span>
                   );
                 })}
-                <span style={{ color:'var(--color-text-secondary)' }}> — click the slot to swap in cover.</span>
+                <span style={{ color:'var(--color-text-secondary)' }}> — {t('bestxi.click_swap')}.</span>
               </div>
             </div>
           )}
@@ -314,17 +315,17 @@ export default function BestXIPage() {
             <div style={{ padding:'16px 20px', display:'flex', alignItems:'center', justifyContent:'space-between', borderBottom:'1px solid var(--color-border)' }}>
               <div style={{ display:'flex', alignItems:'center', gap:14 }}>
                 <div>
-                  <div className="eyebrow">{edited ? 'Manually edited' : 'Optimised'}</div>
+                  <div className="eyebrow">{edited ? t('bestxi.manually_edited') : t('bestxi.optimised')}</div>
                   <div style={{ fontFamily:'var(--font-display)', fontSize:22, letterSpacing:'0.02em', display:'flex', alignItems:'center', gap:10 }}>
-                    {formation} · {window_}D · {candidateCount} ELIGIBLE
+                    {formation} · {window_}D · {candidateCount} {t('bestxi.eligible')}
                     {edited && <span style={{ fontFamily:'var(--font-mono)', fontSize:10, fontWeight:600, letterSpacing:'0.1em', color:'var(--color-gold)', background:'var(--color-gold-soft)', border:'1px solid rgba(212,175,55,0.4)', padding:'2px 7px', borderRadius:4 }}>EDITED</span>}
                   </div>
                 </div>
               </div>
               <div style={{ display:'flex', gap:8 }}>
-                <Button variant={edited ? 'secondary' : 'green'} size="sm" onClick={autoFill} icon={<span>{edited ? '↺' : '⚡'}</span>}>{edited ? 'Reset to optimal' : 'Auto-fill'}</Button>
-                <Button variant="secondary" size="sm" loading={exporting} onClick={exportPNG} icon={<span>↓</span>}>Export PNG</Button>
-                <Button variant="ghost" size="sm" onClick={() => navigator.clipboard?.writeText(window.location.href).then(() => alert('Link copied'))} iconRight={<span>↗</span>}>Share XI</Button>
+                <Button variant={edited ? 'secondary' : 'green'} size="sm" onClick={autoFill} icon={<span>{edited ? '↺' : '⚡'}</span>}>{edited ? t('bestxi.reset_optimal') : t('bestxi.autofill')}</Button>
+                <Button variant="secondary" size="sm" loading={exporting} onClick={exportPNG} icon={<span>↓</span>}>{t('bestxi.export_png')}</Button>
+                <Button variant="ghost" size="sm" onClick={() => navigator.clipboard?.writeText(window.location.href).then(() => alert('Link copied'))} iconRight={<span>↗</span>}>{t('bestxi.share_xi')}</Button>
               </div>
             </div>
             {loading ? (
@@ -339,20 +340,20 @@ export default function BestXIPage() {
           <Card padding={18} style={{ marginTop:16 }}>
             <details>
               <summary style={{ cursor:'pointer', fontSize:13, fontWeight:600, color:'var(--color-text-primary)', userSelect:'none' }}>
-                Optimiser details
+                {t('bestxi.optimiser_details')}
               </summary>
               <div style={{ marginTop:14, display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:14, fontSize:12 }}>
-                <Detail label="Formation" value={formation}/>
-                <Detail label="Window" value={`${window_} days`}/>
-                <Detail label="Method" value={method === 'commercial' ? 'Sofascore' : 'xT/VAEP'}/>
-                <Detail label="Min minutes" value={`${minMinutes}′`}/>
-                <Detail label="Buckets" value={buckets.join(', ')} mono={false}/>
-                <Detail label="Pool size" value={`${candidateCount} players`}/>
-                <Detail label="Mean rating" value={meanRating}/>
-                <Detail label="Data quality" value={`${eventCount}/11 event`}/>
+                <Detail label={t('bestxi.detail_formation')} value={formation}/>
+                <Detail label={t('bestxi.detail_window')} value={`${window_} ${t('bestxi.detail_days')}`}/>
+                <Detail label={t('bestxi.detail_method')} value={method === 'commercial' ? 'Sofascore' : 'xT/VAEP'}/>
+                <Detail label={t('bestxi.detail_min_minutes')} value={`${minMinutes}′`}/>
+                <Detail label={t('bestxi.detail_buckets')} value={buckets.join(', ')} mono={false}/>
+                <Detail label={t('bestxi.detail_pool')} value={String(candidateCount)}/>
+                <Detail label={t('bestxi.detail_mean_rating')} value={meanRating}/>
+                <Detail label={t('bestxi.detail_data_quality')} value={`${eventCount}/11`}/>
               </div>
               <div style={{ marginTop:16, padding:'10px 12px', background:'var(--color-surface-2)', borderInlineStart:'3px solid var(--color-gold)', borderRadius:4, fontSize:11.5, color:'var(--color-text-secondary)', fontStyle:'italic' }}>
-                <strong style={{ color:'var(--color-gold)' }}>Caveat:</strong> {t('bestxi.caveat')} This is not a selection recommendation — tactical fit, chemistry, and injuries are not modelled.
+                <strong style={{ color:'var(--color-gold)' }}>{t('bestxi.caveat_label')}:</strong> {t('bestxi.caveat')} {t('bestxi.caveat_suffix')}
               </div>
             </details>
           </Card>

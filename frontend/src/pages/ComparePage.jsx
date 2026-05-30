@@ -1,16 +1,17 @@
 import { useState, useMemo } from 'react';
 import { useRouter } from '../context/RouterContext.jsx';
+import { useT } from '../context/LanguageContext.jsx';
 import { Button, Card, PositionBadge, RatingChip, ClubLogo, PlayerPhoto, Modal } from '../components/ui/index.jsx';
 import { CompareRadar } from '../components/player/Charts.jsx';
 import { PLAYERS, fmtMV } from '../data.js';
 
-function PlayerSearchBar({ value, onChange }) {
+function PlayerSearchBar({ value, onChange, placeholder }) {
   return (
     <div style={{ position:'relative', width:'100%' }}>
       <span style={{ position:'absolute', insetInlineStart:14, top:'50%', transform:'translateY(-50%)', color:'var(--color-text-tertiary)' }}>
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="7" cy="7" r="5"/><path d="M11 11l3 3"/></svg>
       </span>
-      <input value={value} onChange={(e) => onChange(e.target.value)} placeholder="Search players, clubs…"
+      <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
         style={{ width:'100%', height:38, paddingInlineStart:38, paddingInlineEnd: value ? 38 : 14, background:'var(--color-surface)', border:'1px solid var(--color-border-2)', borderRadius:6, fontSize:13, transition:'border-color 150ms ease', color:'var(--color-text-primary)' }}
         onFocus={(e) => e.target.style.borderColor = 'var(--color-red)'}
         onBlur={(e) => e.target.style.borderColor = 'var(--color-border-2)'}
@@ -22,25 +23,26 @@ function PlayerSearchBar({ value, onChange }) {
   );
 }
 
-const METRICS = [
-  {key:'rating',  label:'Rating',  max:10},
-  {key:'offence', label:'Attack',  max:1},
-  {key:'defence', label:'Defence', max:1},
-  {key:'passing', label:'Passing', max:1},
-  {key:'dribble', label:'Dribble', max:1},
-  {key:'minutes', label:'Minutes', max:2000},
-  {key:'value',   label:'Value',   max:100_000_000},
-  {key:'xt',      label:'xT/90',   max:1},
-];
-
 const SLOT_COLORS = ['#C1121F','#007A3D','#D4AF37','#9FB0CC'];
 
 export default function ComparePage() {
   const { params } = useRouter();
+  const { t } = useT();
   const initial = (params?.players || '').split(',').filter(Boolean);
   const [selected, setSelected] = useState(initial.length ? initial : ['hakimi', 'mazraoui']);
   const [pickerOpen, setPickerOpen] = useState(null);
   const [pickerSearch, setPickerSearch] = useState('');
+
+  const METRICS = [
+    {key:'rating',  label:t('compare.metric_rating'),  max:10},
+    {key:'offence', label:t('compare.metric_attack'),  max:1},
+    {key:'defence', label:t('compare.metric_defence'), max:1},
+    {key:'passing', label:t('compare.metric_passing'), max:1},
+    {key:'dribble', label:t('compare.metric_dribble'), max:1},
+    {key:'minutes', label:t('compare.metric_minutes'), max:2000},
+    {key:'value',   label:t('compare.metric_value'),   max:100_000_000},
+    {key:'xt',      label:t('compare.metric_xt'),      max:1},
+  ];
 
   const players = selected.map(id => PLAYERS.find(p => p.id === id)).filter(Boolean);
 
@@ -73,8 +75,8 @@ export default function ComparePage() {
 
   return (
     <div className="fade-up">
-      <div className="eyebrow" style={{ marginBottom:6 }}>Up to 4 players · cross-league</div>
-      <h1 style={{ fontSize:48, lineHeight:1, marginBottom:24 }}>COMPARE</h1>
+      <div className="eyebrow" style={{ marginBottom:6 }}>{t('compare.eyebrow')}</div>
+      <h1 style={{ fontSize:48, lineHeight:1, marginBottom:24 }}>{t('compare.title')}</h1>
 
       {/* Slots */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:14, marginBottom:28 }} className="compare-slots">
@@ -106,7 +108,7 @@ export default function ComparePage() {
               onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--color-red)'; e.currentTarget.style.background = 'var(--color-red-soft)'; }}
               onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--color-border-2)'; e.currentTarget.style.background = 'transparent'; }}>
               <div style={{ fontSize:32, color:'var(--color-text-tertiary)' }}>+</div>
-              <div style={{ fontSize:12, letterSpacing:'0.04em' }}>Add player</div>
+              <div style={{ fontSize:12, letterSpacing:'0.04em' }}>{t('compare.add_player')}</div>
             </button>
           );
         })}
@@ -115,17 +117,17 @@ export default function ComparePage() {
       {players.length >= 2 && (
         <div style={{ display:'grid', gridTemplateColumns:'460px 1fr', gap:24 }} className="compare-grid">
           <Card>
-            <h3 style={{ fontFamily:'var(--font-display)', fontSize:22, letterSpacing:'0.02em', marginBottom:14 }}>Profile radar</h3>
+            <h3 style={{ fontFamily:'var(--font-display)', fontSize:22, letterSpacing:'0.02em', marginBottom:14 }}>{t('compare.radar_title')}</h3>
             <CompareRadar players={players} metrics={METRICS.slice(0,7)} data={data}/>
           </Card>
           <Card padding={0}>
             <div style={{ padding:'16px 20px', borderBottom:'1px solid var(--color-border)' }}>
-              <h3 style={{ fontFamily:'var(--font-display)', fontSize:22, letterSpacing:'0.02em' }}>Side-by-side</h3>
+              <h3 style={{ fontFamily:'var(--font-display)', fontSize:22, letterSpacing:'0.02em' }}>{t('compare.sidebyside_title')}</h3>
             </div>
             <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
               <thead>
                 <tr style={{ background:'var(--color-surface-2)' }}>
-                  <th style={{ padding:'10px 14px', textAlign:'start', fontFamily:'var(--font-mono)', fontSize:9, letterSpacing:'0.12em', textTransform:'uppercase', color:'var(--color-text-secondary)' }}>Metric</th>
+                  <th style={{ padding:'10px 14px', textAlign:'start', fontFamily:'var(--font-mono)', fontSize:9, letterSpacing:'0.12em', textTransform:'uppercase', color:'var(--color-text-secondary)' }}>{t('compare.metric')}</th>
                   {players.map((p, i) => (
                     <th key={p.id} style={{ padding:'10px 14px', textAlign:'center', fontSize:12 }}>
                       <span style={{ display:'inline-flex', alignItems:'center', gap:6 }}>
@@ -158,7 +160,7 @@ export default function ComparePage() {
               </tbody>
             </table>
             <div style={{ padding:'12px 20px', borderTop:'1px solid var(--color-border)', fontSize:11, color:'var(--color-text-tertiary)', fontStyle:'italic' }}>
-              Cross-league comparisons are positional z-scores within bucket. Heuristic-rated leagues are not directly commensurable with event-data leagues — see Methodology.
+              {t('compare.footnote')}
             </div>
           </Card>
         </div>
@@ -166,14 +168,13 @@ export default function ComparePage() {
 
       {players.length < 2 && (
         <div style={{ textAlign:'center', padding:'48px 24px', color:'var(--color-text-secondary)', fontSize:14 }}>
-          Add at least 2 players to compare them side-by-side.
+          {t('compare.need_two')}
         </div>
       )}
 
-      {/* Add picker modal */}
-      <Modal isOpen={pickerOpen !== null} onClose={() => setPickerOpen(null)} title="Add player" subtitle="Pick anyone from the database" size="md">
+      <Modal isOpen={pickerOpen !== null} onClose={() => setPickerOpen(null)} title={t('compare.add_player')} subtitle={t('compare.picker_subtitle')} size="md">
         <div style={{ padding:'14px 20px' }}>
-          <PlayerSearchBar value={pickerSearch} onChange={setPickerSearch}/>
+          <PlayerSearchBar value={pickerSearch} onChange={setPickerSearch} placeholder={t('common.search')}/>
         </div>
         <div style={{ maxHeight:'48vh', overflowY:'auto' }}>
           {PLAYERS.filter(p => !selected.includes(p.id) && (!pickerSearch || p.name.toLowerCase().includes(pickerSearch.toLowerCase()))).slice(0, 20).map(p => (

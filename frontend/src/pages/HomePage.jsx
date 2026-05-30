@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from '../context/RouterContext.jsx';
+import { useT } from '../context/LanguageContext.jsx';
 import { Button, Card, DataQualityBadge, PlayerPhoto, ClubLogo, PositionBadge, RatingChip } from '../components/ui/index.jsx';
 import { PitchView } from '../components/bestxi/PitchView.jsx';
-import { PLAYERS, FIXTURES, TRENDING, buildBestXI, fmtDateLong } from '../data.js';
+import { PLAYERS, FIXTURES, TRENDING, buildBestXI } from '../data.js';
 
 function Counter({ value, label, suffix }) {
   return (
@@ -52,6 +53,7 @@ function TrendingCard({ player }) {
 }
 
 export function FixtureCard({ fixture }) {
+  const { t } = useT();
   const f = fixture;
   const live = f.status === 'live';
   const finished = f.status === 'finished';
@@ -67,7 +69,7 @@ export function FixtureCard({ fixture }) {
         </div>
         <div style={{ textAlign:'center' }}>
           {live && <div style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'3px 8px', borderRadius:4, background:'var(--color-red-soft)', color:'#E84856', fontSize:10, fontWeight:700, letterSpacing:'0.16em' }}>
-            <span style={{ width:6, height:6, borderRadius:'50%', background:'var(--color-red)' }} className="pulse-red"/>LIVE
+            <span style={{ width:6, height:6, borderRadius:'50%', background:'var(--color-red)' }} className="pulse-red"/>{t('fixtures.live_now')}
           </div>}
           <div style={{ fontFamily:'var(--font-display)', fontSize:30, letterSpacing:'0.04em', lineHeight:1, marginTop: live ? 6 : 0 }}>
             {finished || live
@@ -87,7 +89,7 @@ export function FixtureCard({ fixture }) {
       {(f.homePlayers?.length || f.awayPlayers?.length) > 0 && (
         <div style={{ padding:'10px 18px', borderTop:'1px solid var(--color-border)', background:'var(--color-bg)', display:'flex', alignItems:'center', justifyContent:'space-between', fontSize:11, color:'var(--color-text-secondary)' }}>
           <PlayerStack ids={f.homePlayers} reverse/>
-          <span style={{ fontFamily:'var(--font-mono)', fontSize:9, letterSpacing:'0.12em', textTransform:'uppercase' }}>Atlas Lions on pitch</span>
+          <span style={{ fontFamily:'var(--font-mono)', fontSize:9, letterSpacing:'0.12em', textTransform:'uppercase' }}>{t('home.atlas_on_pitch')}</span>
           <PlayerStack ids={f.awayPlayers}/>
         </div>
       )}
@@ -113,6 +115,7 @@ function PlayerStack({ ids = [], reverse }) {
 
 export default function HomePage() {
   const { navigate } = useRouter();
+  const { t } = useT();
   const [counts, setCounts] = useState({ players: 0, leagues: 0, matches: 0 });
 
   useEffect(() => {
@@ -151,18 +154,18 @@ export default function HomePage() {
           <div>
             <div style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'6px 12px', borderRadius:'var(--radius-full)', background:'var(--color-red-soft)', border:'1px solid rgba(193,18,31,0.3)', marginBottom:24 }}>
               <span style={{ width:6, height:6, borderRadius:'50%', background:'var(--color-red)' }} className="pulse-red"/>
-              <span className="eyebrow" style={{ color:'#E84856', fontSize:10 }}>Updated 2 hours ago · Matchweek 38</span>
+              <span className="eyebrow" style={{ color:'#E84856', fontSize:10 }}>{t('home.hero_eyebrow')}</span>
             </div>
             <h1 style={{ fontSize:'clamp(48px, 7vw, 88px)', lineHeight:0.92, letterSpacing:'-0.005em', marginBottom:18 }}>
-              THE BEST XI.<br/>
-              <span style={{ color:'var(--color-red)' }}>RIGHT NOW.</span>
+              {t('home.hero_title1')}<br/>
+              <span style={{ color:'var(--color-red)' }}>{t('home.hero_title2')}</span>
             </h1>
             <p style={{ fontSize:17, color:'var(--color-text-secondary)', maxWidth:540, marginBottom:36, lineHeight:1.55 }}>
-              Data-driven ratings for every Moroccan professional footballer worldwide — from <span style={{ color:'var(--color-text-primary)' }}>La Liga</span> to the <span style={{ color:'var(--color-text-primary)' }}>Botola</span> to the <span style={{ color:'var(--color-text-primary)' }}>Saudi Pro League</span>. Updated daily.
+              {t('home.hero_body')}
             </p>
             <div style={{ display:'flex', gap:12 }}>
-              <Button variant="primary" size="lg" onClick={() => navigate('/best-xi')} iconRight={<span>→</span>}>Build the Best XI</Button>
-              <Button variant="secondary" size="lg" onClick={() => navigate('/players')}>Browse Players</Button>
+              <Button variant="primary" size="lg" onClick={() => navigate('/best-xi')} iconRight={<span>→</span>}>{t('home.btn_build')}</Button>
+              <Button variant="secondary" size="lg" onClick={() => navigate('/players')}>{t('home.btn_browse')}</Button>
             </div>
           </div>
           <div style={{ width:320, opacity:0.95 }} className="hero-pitch-hide">
@@ -171,19 +174,19 @@ export default function HomePage() {
         </div>
 
         <div style={{ position:'relative', display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:32, marginTop:56, paddingTop:32, borderTop:'1px solid var(--color-border)' }}>
-          <Counter value={counts.players} label="Players tracked" suffix="+"/>
-          <Counter value={counts.leagues} label="Leagues monitored" suffix="+"/>
-          <Counter value={counts.matches} label="Matches indexed" suffix=""/>
+          <Counter value={counts.players} label={t('home.counter_players')} suffix="+"/>
+          <Counter value={counts.leagues} label={t('home.counter_leagues')} suffix="+"/>
+          <Counter value={counts.matches} label={t('home.counter_matches')} suffix=""/>
         </div>
       </section>
 
       {/* FEATURED BEST XI */}
       <section style={{ marginBottom:56 }}>
         <SectionHeader
-          eyebrow="Form Guide"
-          title="Current Best XI"
-          subtitle="4-3-3 · Last 30 days · All competitions"
-          action={<Button variant="ghost" onClick={() => navigate('/best-xi')} iconRight={<span>→</span>}>Customise</Button>}
+          eyebrow={t('home.form_guide')}
+          title={t('home.current_xi_title')}
+          subtitle={t('home.current_xi_subtitle')}
+          action={<Button variant="ghost" onClick={() => navigate('/best-xi')} iconRight={<span>→</span>}>{t('home.customise')}</Button>}
         />
         <Card padding={0} style={{ overflow:'hidden' }}>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 360px', gap:0 }} className="best-xi-preview-grid">
@@ -191,7 +194,7 @@ export default function HomePage() {
               <PitchView formation="4-3-3" startingXI={featuredXI}/>
             </div>
             <div style={{ padding:'24px 26px', borderInlineStart:'1px solid var(--color-border)' }}>
-              <div className="eyebrow" style={{ marginBottom:14 }}>Starting XI · Top rated</div>
+              <div className="eyebrow" style={{ marginBottom:14 }}>{t('home.starting_xi_label')}</div>
               <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
                 {featuredXI.slice(0, 7).map(s => (
                   <div key={s.player?.id} style={{ display:'flex', alignItems:'center', gap:10 }}>
@@ -202,7 +205,7 @@ export default function HomePage() {
                 ))}
               </div>
               <div style={{ marginTop:18, paddingTop:14, borderTop:'1px solid var(--color-border)', fontSize:11, color:'var(--color-text-tertiary)', fontStyle:'italic' }}>
-                + 4 more · Click "Customise" to change formation, window &amp; league filter
+                {t('home.more_click')}
               </div>
             </div>
           </div>
@@ -211,7 +214,7 @@ export default function HomePage() {
 
       {/* TRENDING */}
       <section style={{ marginBottom:56 }}>
-        <SectionHeader eyebrow="↑ Form Guide" title="Rising — last 14 days" subtitle="Players with the biggest rating jumps"/>
+        <SectionHeader eyebrow={t('home.rising_eyebrow')} title={t('home.rising_title')} subtitle={t('home.rising_subtitle')}/>
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(190px, 1fr))', gap:14 }}>
           {TRENDING.map(p => <TrendingCard key={p.id} player={p}/>)}
         </div>
@@ -220,25 +223,25 @@ export default function HomePage() {
       {/* FIXTURES + METHODOLOGY */}
       <section style={{ display:'grid', gridTemplateColumns:'2fr 1fr', gap:24, marginBottom:48 }} className="home-dual-grid">
         <div>
-          <SectionHeader eyebrow="Atlas Lions" title="Upcoming international fixtures"/>
+          <SectionHeader eyebrow={t('home.nt_eyebrow')} title={t('home.nt_title')}/>
           <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
             {upcomingNT.length > 0
               ? upcomingNT.map(f => <FixtureCard key={f.id} fixture={f}/>)
-              : <Card padding={24} style={{ textAlign:'center', color:'var(--color-text-secondary)', fontSize:13 }}>No upcoming fixtures found</Card>}
+              : <Card padding={24} style={{ textAlign:'center', color:'var(--color-text-secondary)', fontSize:13 }}>{t('home.no_fixtures')}</Card>}
           </div>
         </div>
         <Card style={{ background:'linear-gradient(160deg, rgba(193,18,31,0.12), transparent 60%), var(--color-surface)' }}>
-          <div className="eyebrow" style={{ marginBottom:8 }}>Methodology</div>
-          <h3 style={{ fontFamily:'var(--font-display)', fontSize:26, letterSpacing:'0.01em', marginBottom:10, lineHeight:1.05 }}>How we rate</h3>
+          <div className="eyebrow" style={{ marginBottom:8 }}>{t('home.method_eyebrow')}</div>
+          <h3 style={{ fontFamily:'var(--font-display)', fontSize:26, letterSpacing:'0.01em', marginBottom:10, lineHeight:1.05 }}>{t('home.method_title')}</h3>
           <p style={{ fontSize:13, color:'var(--color-text-secondary)', lineHeight:1.55, marginBottom:16 }}>
-            Every rating carries a data-quality badge. We use Sofascore for breadth and a custom xT/VAEP model for Big 5 + SPL where event data is available.
+            {t('home.method_body')}
           </p>
           <div style={{ display:'flex', flexDirection:'column', gap:10, marginBottom:18 }}>
             <DataQualityBadge quality="event"/>
             <DataQualityBadge quality="rating"/>
             <DataQualityBadge quality="heuristic"/>
           </div>
-          <Button variant="secondary" size="sm" onClick={() => navigate('/methodology')} iconRight={<span>→</span>}>Read the methodology</Button>
+          <Button variant="secondary" size="sm" onClick={() => navigate('/methodology')} iconRight={<span>→</span>}>{t('home.method_btn')}</Button>
         </Card>
       </section>
 

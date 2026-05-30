@@ -63,6 +63,27 @@ html, body {
 
 html[dir="rtl"] body { font-family: var(--font-arabic); }
 
+html[dir="rtl"] .eyebrow {
+  font-family: var(--font-arabic) !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}
+
+html[dir="rtl"] h1,
+html[dir="rtl"] h2,
+html[dir="rtl"] h3,
+html[dir="rtl"] h4 {
+  font-family: var(--font-arabic) !important;
+  letter-spacing: 0 !important;
+}
+
+html[dir="rtl"] .mono,
+html[dir="rtl"] [style*="font-family: var(--font-mono)"],
+html[dir="rtl"] [style*="font-family:var(--font-mono)"] {
+  font-family: var(--font-arabic) !important;
+  letter-spacing: 0 !important;
+}
+
 a { color: inherit; text-decoration: none; }
 button { font-family: inherit; cursor: pointer; }
 input, select, textarea { font-family: inherit; color: inherit; }

@@ -88,4 +88,51 @@ async function getWindowScores({ window: windowDays, buckets, ratingMethod, minM
   return candidates.sort((a, b) => b.avgRating - a.avgRating);
 }
 
-module.exports = { getWindowScores };
+/**
+ * Compute minutes-weighted average rating for a single player within a time window.
+ * Queries Rating docs directly by matchDate — does not require Match refs.
+ *
+ * @param {string|ObjectId} playerId
+ * @param {number}          windowDays  — one of 15 | 30 | 45 | 60 | 75 | 90
+ * @returns {{ avgRating, totalMinutes, matchCount, dataQuality, window }}
+ */
+async function getPlayerRating(playerId, windowDays = 30) {
+  const days  = WINDOW_DAYS[windowDays] || 30;
+  const since = new Date(Date.now() - days * 24 * 3600 * 1000);
+
+  const ratings = await Rating.find({
+    player   : playerId,
+    matchDate: { $gte: since },
+  }).lean();
+
+  const qualityRank = { event: 3, rating: 2, heuristic: 1, none: 0 };
+  let weightedSum = 0;
+  let totalWeight = 0;
+  let bestQuality = 'none';
+
+  for (const r of ratings) {
+    // dataQuality is tracked across ALL ratings in the window
+    if (qualityRank[r.dataQuality] > qualityRank[bestQuality]) bestQuality = r.dataQuality;
+
+    // Pick the best available score, mirroring the lineupService fallback chain
+    const score = r.sofascoreRating ?? r.normalisedCustom ?? r.fotmobRating ?? null;
+    if (score == null) continue;
+
+    const min = r.minutes || 0;
+    weightedSum += score * min;
+    totalWeight += min;
+  }
+
+  const avgRating    = totalWeight > 0 ? Math.round((weightedSum / totalWeight) * 10) / 10 : null;
+  const totalMinutes = ratings.reduce((s, r) => s + (r.minutes || 0), 0);
+
+  return {
+    avgRating,
+    totalMinutes,
+    matchCount  : ratings.length,
+    dataQuality : bestQuality,
+    window      : days,
+  };
+}
+
+module.exports = { getWindowScores, getPlayerRating };

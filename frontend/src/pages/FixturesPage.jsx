@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useT } from '../context/LanguageContext.jsx';
 import { Card, Tabs, Toggle, EmptyState } from '../components/ui/index.jsx';
 import { FixtureCard } from './HomePage.jsx';
 import { FIXTURES, fmtDateLong } from '../data.js';
@@ -22,7 +23,7 @@ const selectStyle = {
   border:'1px solid var(--color-border-2)', borderRadius:6, color:'var(--color-text-primary)', fontSize:13, fontWeight:500, cursor:'pointer',
 };
 
-function FixtureCalendar({ fixtures, month, setMonth, openDay, setOpenDay }) {
+function FixtureCalendar({ fixtures, month, setMonth, openDay, setOpenDay, t }) {
   const y = month.getFullYear(), m = month.getMonth();
   const first = new Date(y, m, 1);
   const startDow = (first.getDay() + 6) % 7;
@@ -45,9 +46,9 @@ function FixtureCalendar({ fixtures, month, setMonth, openDay, setOpenDay }) {
   return (
     <div>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
-        <button onClick={() => { setMonth(new Date(y, m - 1, 1)); setOpenDay(null); }} style={calNavStyle}>‹ Prev</button>
+        <button onClick={() => { setMonth(new Date(y, m - 1, 1)); setOpenDay(null); }} style={calNavStyle}>{t('fixtures.prev')}</button>
         <h3 style={{ fontFamily:'var(--font-display)', fontSize:26, letterSpacing:'0.02em' }}>{monthName}</h3>
-        <button onClick={() => { setMonth(new Date(y, m + 1, 1)); setOpenDay(null); }} style={calNavStyle}>Next ›</button>
+        <button onClick={() => { setMonth(new Date(y, m + 1, 1)); setOpenDay(null); }} style={calNavStyle}>{t('fixtures.next')}</button>
       </div>
       <Card padding={0} style={{ overflow:'hidden' }}>
         <div style={{ display:'grid', gridTemplateColumns:'repeat(7, 1fr)' }}>
@@ -67,7 +68,7 @@ function FixtureCalendar({ fixtures, month, setMonth, openDay, setOpenDay }) {
                 <>
                   <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
                     <span style={{ fontFamily:'var(--font-mono)', fontSize:12, fontWeight:600, color: c.iso === today ? 'var(--color-red)' : 'var(--color-text-secondary)' }}>{c.d}</span>
-                    {c.iso === today && <span style={{ fontSize:8, fontFamily:'var(--font-mono)', letterSpacing:'0.1em', color:'var(--color-red)' }}>TODAY</span>}
+                    {c.iso === today && <span style={{ fontSize:8, fontFamily:'var(--font-mono)', letterSpacing:'0.1em', color:'var(--color-red)' }}>{t('fixtures.today')}</span>}
                   </div>
                   <div style={{ display:'flex', flexWrap:'wrap', gap:3, marginTop:8 }}>
                     {c.fixtures.slice(0,6).map(f => {
@@ -87,7 +88,7 @@ function FixtureCalendar({ fixtures, month, setMonth, openDay, setOpenDay }) {
           <div style={{ display:'flex', alignItems:'center', gap:14, marginBottom:12 }}>
             <h3 style={{ fontFamily:'var(--font-display)', fontSize:20, letterSpacing:'0.02em' }}>{fmtDateLong(openDay)}</h3>
             <div style={{ flex:1, height:1, background:'var(--color-border)' }}/>
-            <button onClick={() => setOpenDay(null)} style={{ ...calNavStyle, padding:'4px 10px' }}>Close ×</button>
+            <button onClick={() => setOpenDay(null)} style={{ ...calNavStyle, padding:'4px 10px' }}>{t('fixtures.close')}</button>
           </div>
           <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
             {openFixtures.map(f => <FixtureCard key={f.id} fixture={f}/>)}
@@ -98,22 +99,30 @@ function FixtureCalendar({ fixtures, month, setMonth, openDay, setOpenDay }) {
   );
 }
 
-const BUCKETS = [
-  { k:'all',          l:'All' },
-  { k:'big5',         l:'Big 5' },
-  { k:'other_europe', l:'Other EU' },
-  { k:'botola',       l:'Botola' },
-  { k:'mena',         l:'MENA' },
-  { k:'international',l:'International' },
-];
-
 export default function FixturesPage() {
+  const { t } = useT();
   const [bucket, setBucket] = useState('all');
   const [marOnly, setMarOnly] = useState(false);
   const [view, setView] = useState('list');
   const [sortBy, setSortBy] = useState('date');
   const [calMonth, setCalMonth] = useState(new Date('2026-05-01'));
   const [openDay, setOpenDay] = useState(null);
+
+  const BUCKETS = [
+    { k:'all',          l: t('fixtures.bucket_all') },
+    { k:'big5',         l: t('fixtures.bucket_big5') },
+    { k:'other_europe', l: t('fixtures.bucket_other_eu') },
+    { k:'botola',       l: t('fixtures.bucket_botola') },
+    { k:'mena',         l: t('fixtures.bucket_mena') },
+    { k:'international',l: t('fixtures.bucket_international') },
+  ];
+
+  const LEGEND = [
+    [t('fixtures.type_international'),'#E84856'],
+    [t('fixtures.type_continental'),'var(--color-gold)'],
+    [t('fixtures.type_cup'),'#48A89C'],
+    [t('fixtures.type_league'),'#94B0D6'],
+  ];
 
   const filtered = useMemo(() => {
     return FIXTURES.filter(f => {
@@ -137,26 +146,26 @@ export default function FixturesPage() {
       const sorted = [...filtered].sort((a,b) =>
         ((b.homePlayers?.length||0)+(b.awayPlayers?.length||0)) - ((a.homePlayers?.length||0)+(a.awayPlayers?.length||0))
       );
-      return [['By Atlas Lions involved', sorted]];
+      return [[t('fixtures.by_lions'), sorted]];
     }
     const map = {};
     filtered.forEach(f => { (map[f.date] = map[f.date] || []).push(f); });
     return Object.entries(map).sort(([a],[b]) => a.localeCompare(b));
-  }, [filtered, sortBy]);
+  }, [filtered, sortBy, t]);
 
   const groupLabel = (key) => sortBy === 'date' ? fmtDateLong(key) : key;
   const liveCount = filtered.filter(f => f.status === 'live').length;
 
   return (
     <div className="fade-up">
-      <div className="eyebrow" style={{ marginBottom:6 }}>Match Centre</div>
-      <h1 style={{ fontSize:48, lineHeight:1, marginBottom:24 }}>FIXTURES</h1>
+      <div className="eyebrow" style={{ marginBottom:6 }}>{t('fixtures.eyebrow')}</div>
+      <h1 style={{ fontSize:48, lineHeight:1, marginBottom:24 }}>{t('fixtures.title')}</h1>
 
       {liveCount > 0 && (
         <Card padding={14} style={{ marginBottom:18, background:'linear-gradient(90deg, var(--color-red-soft), transparent)', borderColor:'rgba(193,18,31,0.4)' }}>
           <div style={{ display:'flex', alignItems:'center', gap:12 }}>
             <span style={{ width:8, height:8, borderRadius:'50%', background:'var(--color-red)' }} className="pulse-red"/>
-            <strong style={{ fontFamily:'var(--font-mono)', letterSpacing:'0.16em', fontSize:12, color:'#E84856' }}>{liveCount} LIVE NOW</strong>
+            <strong style={{ fontFamily:'var(--font-mono)', letterSpacing:'0.16em', fontSize:12, color:'#E84856' }}>{liveCount} {t('fixtures.live_now')}</strong>
             <span style={{ fontSize:12, color:'var(--color-text-secondary)' }}>· Real Sociedad 1-2 Real Madrid · 73′ (Brahim Díaz)</span>
           </div>
         </Card>
@@ -177,22 +186,22 @@ export default function FixturesPage() {
         <div style={{ marginInlineStart:'auto', display:'flex', alignItems:'center', gap:14, flexWrap:'wrap' }}>
           {view === 'list' && (
             <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} style={selectStyle}>
-              <option value="date">By date</option>
-              <option value="competition">By competition</option>
-              <option value="players">By Atlas Lions count</option>
+              <option value="date">{t('fixtures.sort_date')}</option>
+              <option value="competition">{t('fixtures.sort_competition')}</option>
+              <option value="players">{t('fixtures.sort_players')}</option>
             </select>
           )}
           <div style={{ display:'flex', alignItems:'center', gap:8, fontSize:12 }}>
-            <span style={{ color:'var(--color-text-secondary)' }}>NT only</span>
+            <span style={{ color:'var(--color-text-secondary)' }}>{t('fixtures.nt_only')}</span>
             <Toggle checked={marOnly} onChange={setMarOnly}/>
           </div>
-          <Tabs variant="pill" tabs={[{id:'list', label:'List'},{id:'calendar', label:'Calendar'}]} activeTab={view} onTabChange={setView}/>
+          <Tabs variant="pill" tabs={[{id:'list', label:t('fixtures.list')},{id:'calendar', label:t('fixtures.calendar')}]} activeTab={view} onTabChange={setView}/>
         </div>
       </div>
 
-      {/* Importance legend */}
+      {/* Legend */}
       <div style={{ display:'flex', gap:16, marginBottom:18, flexWrap:'wrap', fontSize:11, color:'var(--color-text-secondary)' }}>
-        {[['International','#E84856'],['Continental','var(--color-gold)'],['Cup','#48A89C'],['League','#94B0D6']].map(([l,c]) => (
+        {LEGEND.map(([l,c]) => (
           <span key={l} style={{ display:'inline-flex', alignItems:'center', gap:6 }}>
             <span style={{ width:9, height:9, borderRadius:'50%', background:c }}/>{l}
           </span>
@@ -200,7 +209,7 @@ export default function FixturesPage() {
       </div>
 
       {view === 'calendar' ? (
-        <FixtureCalendar fixtures={filtered} month={calMonth} setMonth={setCalMonth} openDay={openDay} setOpenDay={setOpenDay}/>
+        <FixtureCalendar fixtures={filtered} month={calMonth} setMonth={setCalMonth} openDay={openDay} setOpenDay={setOpenDay} t={t}/>
       ) : (
         <div style={{ display:'flex', flexDirection:'column', gap:24 }}>
           {grouped.map(([key, list]) => (
@@ -208,14 +217,14 @@ export default function FixturesPage() {
               <div style={{ display:'flex', alignItems:'center', gap:14, marginBottom:12 }}>
                 <h3 style={{ fontFamily:'var(--font-display)', fontSize:22, letterSpacing:'0.02em' }}>{groupLabel(key)}</h3>
                 <div style={{ flex:1, height:1, background:'var(--color-border)' }}/>
-                <span style={{ fontFamily:'var(--font-mono)', fontSize:10, color:'var(--color-text-tertiary)', letterSpacing:'0.1em' }}>{list.length} MATCHES</span>
+                <span style={{ fontFamily:'var(--font-mono)', fontSize:10, color:'var(--color-text-tertiary)', letterSpacing:'0.1em' }}>{list.length} {t('fixtures.matches')}</span>
               </div>
               <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
                 {list.map(f => <FixtureCard key={f.id} fixture={f}/>)}
               </div>
             </div>
           ))}
-          {grouped.length === 0 && <EmptyState icon="◌" title="No fixtures" description="No matches match the current filters."/>}
+          {grouped.length === 0 && <EmptyState icon="◌" title={t('fixtures.no_fixtures')} description={t('fixtures.no_fixtures_desc')}/>}
         </div>
       )}
     </div>

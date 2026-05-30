@@ -1,7 +1,7 @@
 const { Schema, model } = require('mongoose');
 
 const leagueSchema = new Schema({
-  apiFootballId: Number,
+  apiFootballId: { type: Number, index: true, sparse: true },
   name: { type: String, required: true },
   country: String,
   tier: Number,

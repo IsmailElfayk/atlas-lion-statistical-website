@@ -88,7 +88,7 @@ function GoalsChart({ data }) {
   );
 }
 
-function XGChart({ data }) {
+function XGChart({ data, goalsLabel }) {
   const W = 460, H = 200, P = { t:14, r:14, b:30, l:28 };
   const iW = W - P.l - P.r, iH = H - P.t - P.b;
   const maxV = Math.max(4, ...data.map(d => Math.max(d.gf, d.xg)));
@@ -113,7 +113,7 @@ function XGChart({ data }) {
       })}
       <g transform={`translate(${P.l},${H-8})`}>
         <rect width="9" height="9" rx="2" fill="var(--color-red)"/>
-        <text x="13" y="8" fontSize="9" fontFamily="var(--font-mono)" fill="var(--color-text-secondary)">Goals</text>
+        <text x="13" y="8" fontSize="9" fontFamily="var(--font-mono)" fill="var(--color-text-secondary)">{goalsLabel}</text>
         <rect x="56" width="9" height="9" rx="2" fill="rgba(212,175,55,0.55)"/>
         <text x="69" y="8" fontSize="9" fontFamily="var(--font-mono)" fill="var(--color-text-secondary)">xG</text>
       </g>
@@ -137,10 +137,15 @@ export default function StatsPage() {
   const S = NT_STATS;
 
   const kpis = [
-    { k:'goalsScored',   label:'Goals scored',   better:'up' },
-    { k:'goalsConceded', label:'Goals conceded', better:'down' },
-    { k:'cleanSheets',   label:'Clean sheets',   better:'up' },
-    { k:'winRate',       label:'Win rate',       better:'up', suffix:'%' },
+    { k:'goalsScored',   label:t('stats.goals_scored'),   better:'up' },
+    { k:'goalsConceded', label:t('stats.goals_conceded'), better:'down' },
+    { k:'cleanSheets',   label:t('stats.clean_sheets'),   better:'up' },
+    { k:'winRate',       label:t('stats.win_rate'),       better:'up', suffix:'%' },
+  ];
+
+  const tableHeaders = [
+    t('stats.col_rank'), t('stats.col_player'), t('stats.col_caps'),
+    t('stats.col_goals'), t('stats.col_assists'), t('stats.col_avg'),
   ];
 
   return (
@@ -148,15 +153,15 @@ export default function StatsPage() {
       <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:6 }}>
         <span style={{ fontSize:26 }}>🇲🇦</span>
         <div className="eyebrow" style={{ color:'var(--color-red)' }}>
-          National Team · {S.year} · {S.internationalsPlayed} internationals
+          {t('stats.eyebrow').replace('{year}', S.year).replace('{n}', S.internationalsPlayed)}
         </div>
       </div>
-      <h1 style={{ fontSize:48, lineHeight:1, marginBottom:24 }}>MOROCCO — ATLAS LIONS</h1>
+      <h1 style={{ fontSize:48, lineHeight:1, marginBottom:24 }}>{t('stats.title')}</h1>
 
       {/* Form strip */}
       <Card padding={18} style={{ marginBottom:24 }}>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:14 }}>
-          <div className="eyebrow">Form · last 10</div>
+          <div className="eyebrow">{t('stats.form_last10')}</div>
           <div style={{ display:'flex', gap:6 }}>
             {S.formLast10.map((r, i) => (
               <span key={i} style={{
@@ -187,7 +192,7 @@ export default function StatsPage() {
                 <span style={{ color: positive ? 'var(--color-green)' : '#E84856' }}>
                   {delta > 0 ? '↑' : '↓'} {Math.abs(delta)}{kp.suffix || ''}
                 </span>
-                <span style={{ color:'var(--color-text-tertiary)' }}>vs {S.year - 1}</span>
+                <span style={{ color:'var(--color-text-tertiary)' }}>{t('stats.vs_prev').replace('{year}', S.year - 1)}</span>
               </div>
             </Card>
           );
@@ -197,14 +202,14 @@ export default function StatsPage() {
       {/* Charts */}
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:24, marginBottom:24 }} className="stats-chart-grid">
         <Card padding={20}>
-          <h3 style={{ fontFamily:'var(--font-display)', fontSize:20, letterSpacing:'0.02em', marginBottom:4 }}>Goals per match</h3>
-          <div style={{ fontSize:12, color:'var(--color-text-secondary)', marginBottom:14 }}>Last 20 internationals</div>
+          <h3 style={{ fontFamily:'var(--font-display)', fontSize:20, letterSpacing:'0.02em', marginBottom:4 }}>{t('stats.goals_chart_title')}</h3>
+          <div style={{ fontSize:12, color:'var(--color-text-secondary)', marginBottom:14 }}>{t('stats.goals_chart_sub')}</div>
           <GoalsChart data={S.perMatch}/>
         </Card>
         <Card padding={20}>
-          <h3 style={{ fontFamily:'var(--font-display)', fontSize:20, letterSpacing:'0.02em', marginBottom:4 }}>xG vs goals scored</h3>
-          <div style={{ fontSize:12, color:'var(--color-text-secondary)', marginBottom:14 }}>Finishing vs expected · last 20</div>
-          <XGChart data={S.perMatch}/>
+          <h3 style={{ fontFamily:'var(--font-display)', fontSize:20, letterSpacing:'0.02em', marginBottom:4 }}>{t('stats.xg_chart_title')}</h3>
+          <div style={{ fontSize:12, color:'var(--color-text-secondary)', marginBottom:14 }}>{t('stats.xg_chart_sub')}</div>
+          <XGChart data={S.perMatch} goalsLabel={t('stats.goals_label')}/>
         </Card>
       </div>
 
@@ -213,17 +218,17 @@ export default function StatsPage() {
 
         <Card padding={0}>
           <div style={{ padding:'16px 20px', borderBottom:'1px solid var(--color-border)' }}>
-            <h3 style={{ fontFamily:'var(--font-display)', fontSize:20, letterSpacing:'0.02em' }}>Top contributors</h3>
-            <div style={{ fontSize:12, color:'var(--color-text-secondary)', marginTop:2 }}>Morocco-only ratings · last 365 days</div>
+            <h3 style={{ fontFamily:'var(--font-display)', fontSize:20, letterSpacing:'0.02em' }}>{t('stats.top_contrib')}</h3>
+            <div style={{ fontSize:12, color:'var(--color-text-secondary)', marginTop:2 }}>{t('stats.top_contrib_sub')}</div>
           </div>
           <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
             <thead>
               <tr style={{ background:'var(--color-surface-2)' }}>
-                {['#','Player','Caps','G','A','Avg'].map(h => (
+                {tableHeaders.map(h => (
                   <th key={h} style={{
                     padding:'8px 14px', fontFamily:'var(--font-mono)', fontSize:9,
                     letterSpacing:'0.1em', textTransform:'uppercase', color:'var(--color-text-secondary)',
-                    textAlign: h === 'Player' ? 'start' : 'center',
+                    textAlign: h === t('stats.col_player') ? 'start' : 'center',
                   }}>{h}</th>
                 ))}
               </tr>
@@ -253,7 +258,7 @@ export default function StatsPage() {
 
         <Card padding={0}>
           <div style={{ padding:'16px 20px', borderBottom:'1px solid var(--color-border)' }}>
-            <h3 style={{ fontFamily:'var(--font-display)', fontSize:20, letterSpacing:'0.02em' }}>Recent results</h3>
+            <h3 style={{ fontFamily:'var(--font-display)', fontSize:20, letterSpacing:'0.02em' }}>{t('stats.recent_results')}</h3>
           </div>
           <div>
             {RECENT_RESULTS.map((r, i) => (

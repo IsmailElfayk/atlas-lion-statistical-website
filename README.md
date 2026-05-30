@@ -581,3 +581,76 @@ if (require.main === module) {
 }
 module.exports = app; // Vercel imports this
 ```
+
+---
+
+## Data Ingestion Layer
+
+Real match data is pulled from three sources and merged into the MongoDB collections.
+
+### Sources
+
+| Source | Auth | Rate Limit | Used For |
+|---|---|---|---|
+| **API-Football** (api-sports.io) | `API_FOOTBALL_KEY` header | 100 req/day free | Leagues, clubs, players, fixtures, ratings, injuries |
+| **TheSportsDB** | Public key `123` in URL | 30 req/min | Club colors, logo URLs |
+| **StatsBomb Open Data** | None (public GitHub) | Unlimited | xT/VAEP event data → `normalisedCustom` |
+
+### Sync Endpoints
+
+All `POST /api/sync/*` routes require the `x-sync-secret` header matching `SYNC_SECRET`.
+
+| Endpoint | What it does |
+|---|---|
+| `POST /api/sync/leagues` | Upsert leagues from API-Football `/leagues` |
+| `POST /api/sync/clubs` | Upsert clubs + enrich colors from TheSportsDB |
+| `POST /api/sync/players` | Upsert Moroccan players per league (paginated) |
+| `POST /api/sync/fixtures` | Upsert matches + set `moroccansPlaying` |
+| `POST /api/sync/ratings` | Write `Rating` docs from fixture player stats |
+| `POST /api/sync/injuries` | Update `Player.status` + `returnDate` |
+| `POST /api/sync/statsbomb` | Compute xT proxy, set `normalisedCustom` on Ratings |
+| `POST /api/sync/cache` | Evict all `bestxi:*` keys from Upstash Redis |
+| `POST /api/sync/all` | Run full pipeline in sequence (1s between stages) |
+
+**Example:**
+```bash
+curl -X POST https://your-app.vercel.app/api/sync/fixtures \
+  -H "x-sync-secret: $SYNC_SECRET"
+```
+
+### Cron Schedule (local / dedicated server)
+
+Jobs are registered in `backend/jobs/cronJobs.js` via `node-cron`:
+
+| Schedule | Job |
+|---|---|
+| Daily 02:00 UTC | leagues + clubs + players |
+| Daily 06:00 & 18:00 UTC | fixtures + injuries |
+| Every 30 min (06–23 UTC) | ratings for last 48h (matchday cadence) |
+| 1st of month 03:00 UTC | StatsBomb event enrichment |
+
+> **Vercel note:** Serverless functions don't support persistent cron processes. On Vercel, use [Vercel Cron](https://vercel.com/docs/cron-jobs) (Pro plan) or an external scheduler (GitHub Actions, cron-job.org) to `POST /api/sync/*` on the same schedule.
+
+### API-Football Cache Strategy
+
+Every API-Football call goes through a Redis cache wrapper before hitting the network. Cache key: `apifb:<path>:<params>` — TTL 23 hours. This ensures the 100 req/day free tier is never exceeded on repeated syncs.
+
+### StatsBomb xT Proxy Formula
+
+```
+raw_xT = (shots × 0.10 + key_passes × 0.07 + progressive_carries × 0.03) × 90 / minutes
+z      = (raw_xT − mean) / std_dev
+normalisedCustom = clamp(6.5 + z × 1.2, 3.0, 10.0)
+```
+
+Scores are z-scored across all Morocco players in the dataset and scaled to the same 3–10 range as Sofascore ratings.
+
+### New Environment Variables
+
+Add to `backend/.env` (see `.env.example`):
+
+```env
+API_FOOTBALL_KEY=your_key_from_api-sports.io
+SYNC_SEASON=2025
+SYNC_SECRET=generate_with__openssl_rand_-hex_32
+```

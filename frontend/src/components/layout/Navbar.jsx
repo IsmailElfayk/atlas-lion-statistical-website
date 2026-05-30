@@ -109,7 +109,7 @@ function LanguageSwitcher({ locale, setLocale }) {
 }
 
 export default function Navbar() {
-  const { t, locale, setLocale } = useT();
+  const { t, locale, setLocale, isRTL } = useT();
   const { path, navigate } = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -122,7 +122,7 @@ export default function Navbar() {
 
   const links = [
     {to:'/',label:t('nav.home')},{to:'/best-xi',label:t('nav.bestxi')},{to:'/players',label:t('nav.players')},
-    {to:'/fixtures',label:t('nav.fixtures')},{to:'/stats',label:'Stats'},{to:'/compare',label:t('nav.compare')},{to:'/methodology',label:t('nav.methodology')},
+    {to:'/fixtures',label:t('nav.fixtures')},{to:'/stats',label:t('nav.stats')},{to:'/compare',label:t('nav.compare')},{to:'/methodology',label:t('nav.methodology')},
   ];
   const isActive = to => to==='/'?path==='/':path.startsWith(to);
 
@@ -141,7 +141,8 @@ export default function Navbar() {
       <div style={{display:'flex',alignItems:'center',gap:22}} className="nav-center">
         {links.map(l=>(
           <a key={l.to} href={'#'+l.to} onClick={e=>{e.preventDefault();navigate(l.to);}}
-            style={{ fontSize:12,fontWeight:500,letterSpacing:'0.06em',textTransform:'uppercase',
+            style={{ fontSize:12,fontWeight:500,
+              letterSpacing:isRTL?'0':'0.06em',textTransform:isRTL?'none':'uppercase',
               color:isActive(l.to)?'var(--color-text-primary)':'var(--color-text-secondary)',
               borderBottom:`2px solid ${isActive(l.to)?'var(--color-red)':'transparent'}`,
               padding:'4px 0',transition:'all 150ms ease' }}>{l.label}</a>

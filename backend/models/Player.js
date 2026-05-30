@@ -2,6 +2,13 @@ const { Schema, model } = require('mongoose');
 
 const playerSchema = new Schema({
   slug: { type: String, unique: true },
+  // Consolidated external IDs (preferred over top-level legacy fields)
+  externalIds: {
+    apiFootball:  { type: Number, index: true, sparse: true },
+    sportsdb:     String,
+    transfermarkt: String,
+  },
+  // Legacy top-level IDs kept for backward compat
   sofascoreId: Number,
   apiFootballId: Number,
   transfermarktId: String,
@@ -25,6 +32,7 @@ const playerSchema = new Schema({
   minutesCurrent: { type: Number, default: 0 },
   status: { type: String, enum: ['available','doubtful','injured','suspended'], default: 'available' },
   returnDate: Date,
+  lastSyncedAt: Date,
 }, { timestamps: true });
 
 playerSchema.index({ fullName: 'text', fullNameAr: 'text' });

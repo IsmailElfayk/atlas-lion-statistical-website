@@ -1,7 +1,7 @@
 const { Schema, model } = require('mongoose');
 
 const clubSchema = new Schema({
-  apiFootballId: Number,
+  apiFootballId: { type: Number, index: true, sparse: true },
   transfermarktId: String,
   name: { type: String, required: true },
   shortName: String,
