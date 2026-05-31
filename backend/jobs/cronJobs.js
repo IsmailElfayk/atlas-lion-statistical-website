@@ -1,58 +1,54 @@
 /**
  * Cron Jobs — Atlas Lions Analytics
  *
- * Schedule 1: '0 0 * * *'   00:00 UTC daily     — full nightly sync
- * Schedule 2: '30 0 * * *'  00:30 UTC daily     — safety-net retry if first run had errors
- *                             or upserted fewer than 20 players
+ * Schedule:
+ *   Every 11 min — process the next data chunk (≤10 API requests).
  *
- * On Vercel serverless: use Vercel Cron to POST /api/sync/run-now instead.
+ * Daily cycle (auto-resets at midnight UTC):
+ *   Phase 1 — ratings  : ~65 players × 1 req  = 7 chunks  (77 min)
+ *   Phase 2 — matches  : 12 codes × 1 req      = 2 chunks  (22 min)
+ *   Phase 3 — players  : 12 codes × 1 req      = 2 chunks  (22 min)
+ *   Total               : ~89 req, ~11 chunks, ~2 h → idle until tomorrow
+ *
+ * Rate-limit safety: footballDataClient.js enforces 10 req / 11 min sliding window.
+ * Daily budget:      95 req (syncChunk stops automatically when reached).
+ * Concurrency:       chunkRunning flag prevents overlapping executions.
+ *
+ * Note: node-cron requires a persistent process. On Vercel, trigger via
+ * Vercel Cron (vercel.json) pointing at POST /api/sync/chunk instead.
  */
 
-const cron         = require('node-cron');
-const { nightlySync } = require('../services/nightlySync');
-const SyncLog      = require('../models/SyncLog');
+const cron      = require('node-cron');
+const syncChunk = require('../sync/syncChunk');
 
-async function runSync(label) {
-  console.log(`[Cron] ▶ ${label} — ${new Date().toISOString()}`);
+let chunkRunning = false;
+
+async function runChunk() {
+  if (chunkRunning) {
+    console.log('[Cron] ⏩ Previous chunk still running — skipping this tick');
+    return;
+  }
+  chunkRunning = true;
+  console.log(`[Cron] ▶ chunk tick — ${new Date().toISOString()}`);
   try {
-    const report = await nightlySync();
-    console.log(`[Cron] ✓ ${label} done — players: ${report.playersUpserted}, ratings: ${report.ratingsUpserted}`);
-    return report;
+    const report = await syncChunk();
+    console.log(`[Cron] ✓ chunk done — status=${report.status} req=${report.requestsMade ?? 0} today=${report.requestsToday ?? '?'}`);
   } catch (err) {
-    // Never crash the process — log and continue
-    console.error(`[Cron] ✗ ${label} failed:`, err.message);
-    return null;
+    console.error('[Cron] ✗ chunk failed:', err.message);
+  } finally {
+    chunkRunning = false;
   }
 }
 
 function startCronJobs() {
-  // ── Primary: every day at 00:00 UTC ────────────────────────────────────────
-  cron.schedule('0 0 * * *', () => runSync('nightly-sync'), { timezone: 'UTC' });
+  // Every 11 min — process next chunk of ≤10 API requests
+  // Pattern fires at :00, :11, :22, :33, :44, :55 within each hour.
+  // The rate limiter in footballDataClient handles the :55→:00 (5-min) edge case.
+  cron.schedule('*/11 * * * *', runChunk, { timezone: 'UTC' });
 
-  // ── Safety net: 00:30 UTC — re-run if primary had errors or low player count
-  cron.schedule('30 0 * * *', async () => {
-    const midnight = new Date();
-    midnight.setUTCHours(0, 0, 0, 0);
-
-    const todayLog = await SyncLog.findOne({ startedAt: { $gte: midnight } })
-      .sort({ startedAt: -1 })
-      .lean()
-      .catch(() => null);
-
-    const needsRetry =
-      !todayLog ||
-      todayLog.playersUpserted < 20 ||
-      (todayLog.errors?.length > 0);
-
-    if (needsRetry) {
-      console.log('[Cron] Safety-net triggered — re-running nightly sync');
-      await runSync('nightly-sync-retry');
-    } else {
-      console.log('[Cron] Safety-net: primary sync looks healthy, skipping retry');
-    }
-  }, { timezone: 'UTC' });
-
-  console.log('[Cron] Nightly sync jobs scheduled (00:00 UTC + 00:30 safety net)');
+  console.log('[Cron] Scheduled: chunk every 11 min (UTC)');
+  console.log('[Cron] Daily cycle: ratings → matches → players → done (resets at midnight UTC)');
+  console.log('[Cron] Budget: 95 req/day | Chunk: 10 req/chunk | Full cycle: ~2 h');
 }
 
 module.exports = { startCronJobs };

@@ -1,4 +1,5 @@
 const formations = require('../utils/formations');
+const { getAllWindowAverages } = require('./ratingService');
 
 /**
  * Greedy per-slot assignment:
@@ -11,7 +12,6 @@ async function optimize({ formation, candidates }) {
   const slots = formations[formation];
   if (!slots) throw new Error(`Unknown formation: ${formation}`);
 
-  // Sort descending by avgRating once — greedy picks the best available each slot
   const sorted = [...candidates].sort((a, b) => (b.avgRating ?? 0) - (a.avgRating ?? 0));
 
   const result = slots.map(s => ({ ...s, player: null, subs: [] }));
@@ -29,6 +29,19 @@ async function optimize({ formation, candidates }) {
     }
   }
 
+  // Attach windowAverages to each starter (11 parallel DB queries)
+  await Promise.all(
+    result.map(async slot => {
+      if (!slot.player) return;
+      try {
+        slot.player = {
+          ...slot.player,
+          windowAverages: await getAllWindowAverages(slot.player.playerId),
+        };
+      } catch { /* non-fatal — leave windowAverages undefined */ }
+    })
+  );
+
   // Subs per slot: position-eligible, sorted by avgRating desc,
   // excluding only the slot's own starter (not all starters)
   for (let i = 0; i < slots.length; i++) {
@@ -43,7 +56,7 @@ async function optimize({ formation, candidates }) {
   }
 
   const filled = result.filter(r => r.player).length;
-  const mean = (result.reduce((s, r) => s + (r.player?.avgRating || 0), 0) / 11).toFixed(2);
+  const mean   = (result.reduce((s, r) => s + (r.player?.avgRating || 0), 0) / 11).toFixed(2);
   console.log(`[Lineup] ${formation} → ${filled}/11 slots filled, mean rating: ${mean}`);
 
   return {

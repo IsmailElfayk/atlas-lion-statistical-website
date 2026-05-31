@@ -3,7 +3,7 @@
   "buildCommand": "npm run vercel-build",
   "builds": [
     { "src": "backend/server.js", "use": "@vercel/node" },
-    { "src": "frontend/dist/**", "use": "@vercel/static" }
+    { "src": "frontend/dist/**",  "use": "@vercel/static" }
   ],
   "routes": [
     { "src": "/api/(.*)", "dest": "backend/server.js" },
@@ -11,6 +11,14 @@
     { "src": "/(.*)", "dest": "frontend/dist/index.html" }
   ],
   "functions": {
-    "backend/server.js": { "maxDuration": 30 }
-  }
+    "backend/server.js": {
+      "maxDuration": 60
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/chunk",
+      "schedule": "*/11 * * * *"
+    }
+  ]
 }

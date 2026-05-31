@@ -2,16 +2,12 @@ require('dotenv').config();
 
 // ── Startup env guard ──────────────────────────────────────────────────────────
 (function checkEnv() {
-  // Count how many rotation keys are configured
-  let keyCount = 0;
-  for (let i = 1; i <= 7; i++) { if (process.env[`API_FOOTBALL_KEY${i}`]) keyCount++; }
-
-  console.log('[Atlas] API_FOOTBALL_KEY1…7 :', keyCount > 0 ? `${keyCount} keys loaded` : 'NONE FOUND ⚠');
-  console.log('[Atlas] SYNC_SECRET         :', process.env.SYNC_SECRET   ? 'set' : 'NOT SET ⚠');
-  console.log('[Atlas] MONGO_URI           :', process.env.MONGO_URI      ? 'set' : 'NOT SET ⚠');
-  console.log('[Atlas] UPSTASH_REDIS       :', process.env.UPSTASH_REDIS_REST_URL ? 'set' : 'not set (caching disabled)');
+  console.log('[Atlas] FOOTBALL_DATA_API_KEY:', process.env.FOOTBALL_DATA_API_KEY ? 'set' : 'NOT SET ⚠ (sync will not work)');
+  console.log('[Atlas] SYNC_SECRET          :', process.env.SYNC_SECRET            ? 'set' : 'NOT SET ⚠');
+  console.log('[Atlas] MONGO_URI            :', process.env.MONGO_URI               ? 'set' : 'NOT SET ⚠');
+  console.log('[Atlas] UPSTASH_REDIS        :', process.env.UPSTASH_REDIS_REST_URL  ? 'set' : 'not set (caching disabled)');
   const autoSeason = (() => { const n = new Date(); const y = n.getUTCFullYear(); return n.getUTCMonth() + 1 >= 7 ? y : y - 1; })();
-  console.log('[Atlas] SYNC_SEASON         :', process.env.SYNC_SEASON || `${autoSeason} (auto-detected)`);
+  console.log('[Atlas] SYNC_SEASON          :', process.env.SYNC_SEASON || `${autoSeason} (auto-detected)`);
 })();
 
 const express = require('express');
@@ -35,6 +31,7 @@ app.use('/api/clubs',    require('./routes/clubRoutes'));
 app.use('/api/compare',  require('./routes/compareRoutes'));
 app.use('/api/meta',     require('./routes/metaRoutes'));
 app.use('/api/sync',     require('./routes/syncRoutes'));
+app.use('/api/cron',     require('./routes/cronRoutes'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', version: '0.4.1' }));
 app.use(errorHandler);

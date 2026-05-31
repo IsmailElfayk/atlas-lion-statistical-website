@@ -1,12 +1,11 @@
-// Maps API-Football position strings → our internal primaryPosition enum
-// API-Football coarse: "Goalkeeper" | "Defender" | "Midfielder" | "Attacker"
-// API-Football specific (lineup/fixture endpoints): "Centre-Back", "Left-Back", etc.
+// Maps position strings → our internal primaryPosition enum.
+// Covers both API-Football (coarse + specific) and football-data.org v4 strings.
 
 const POSITION_MAP = {
   // Goalkeepers
   'Goalkeeper':              'GK',
 
-  // Defenders — specific
+  // Defenders — specific (API-Football + FD shared)
   'Centre-Back':             'CB',
   'Center-Back':             'CB',
   'Right-Back':              'RB',
@@ -15,10 +14,11 @@ const POSITION_MAP = {
   'Left Wing-Back':          'LWB',
   'Sweeper':                 'CB',
 
-  // Defenders — coarse fallback
+  // Defenders — coarse
   'Defender':                'CB',
+  'Defence':                 'CB',   // football-data.org coarse
 
-  // Midfielders — specific
+  // Midfielders — specific API-Football strings
   'Defensive Midfielder':    'CDM',
   'Central Midfielder':      'CM',
   'Attacking Midfielder':    'CAM',
@@ -29,21 +29,31 @@ const POSITION_MAP = {
   'Deep-Lying Playmaker':    'CDM',
   'Advanced Playmaker':      'CAM',
 
-  // Midfielders — coarse fallback
-  'Midfielder':              'CM',
+  // Midfielders — football-data.org specific strings
+  'Defensive Midfield':      'CDM',
+  'Central Midfield':        'CM',
+  'Attacking Midfield':      'CAM',
+  'Left Midfield':           'LM',
+  'Right Midfield':          'RM',
 
-  // Attackers — specific
+  // Midfielders — coarse
+  'Midfielder':              'CM',
+  'Midfield':                'CM',   // football-data.org coarse
+
+  // Attackers — specific (API-Football + FD shared)
   'Centre-Forward':          'ST',
   'Center-Forward':          'ST',
   'Second Striker':          'SS',
   'Left Winger':             'LW',
   'Right Winger':            'RW',
   'False Nine':              'SS',
-  'Inside Forward':          'LW', // default; override to RW by context if needed
+  'Inside Forward':          'LW',
   'Striker':                 'ST',
+  'Forward':                 'ST',
 
-  // Attackers — coarse fallback
+  // Attackers — coarse
   'Attacker':                'ST',
+  'Offence':                 'ST',   // football-data.org coarse
 };
 
 /**

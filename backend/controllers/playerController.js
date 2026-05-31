@@ -1,6 +1,6 @@
 const Player = require('../models/Player');
 const Rating = require('../models/Rating');
-const { getPlayerRating } = require('../services/ratingService');
+const { getPlayerRating, getAllWindowAverages } = require('../services/ratingService');
 const { ok, fail } = require('../utils/apiResponse');
 
 const POPULATE = [{ path: 'currentClub', populate: { path: 'league' } }];
@@ -37,7 +37,8 @@ async function listPlayers(req, res) {
     { $match: { player: { $in: playerIds } } },
     { $sort: { matchDate: -1 } },
     { $group: {
-      _id: '$player',
+      _id:              '$player',
+      performanceScore: { $first: '$performanceScore' },
       sofascoreRating:  { $first: '$sofascoreRating' },
       normalisedCustom: { $first: '$normalisedCustom' },
       fotmobRating:     { $first: '$fotmobRating' },
@@ -46,10 +47,9 @@ async function listPlayers(req, res) {
   ]);
   const ratingMap = {};
   ratingDocs.forEach(r => {
-    ratingMap[r._id.toString()] = {
-      latestRating: r.sofascoreRating ?? r.normalisedCustom ?? r.fotmobRating ?? null,
-      dataQuality:  r.dataQuality ?? 'none',
-    };
+    const latestRating =
+      r.performanceScore ?? r.sofascoreRating ?? r.normalisedCustom ?? r.fotmobRating ?? null;
+    ratingMap[r._id.toString()] = { latestRating, dataQuality: r.dataQuality ?? 'none' };
   });
   const enriched = paginated.map(p => {
     const rm = ratingMap[p._id.toString()] || {};
@@ -106,4 +106,17 @@ async function getPlayerRatings(req, res) {
   ok(res, ratings);
 }
 
-module.exports = { listPlayers, getPlayer, getPlayerRatings };
+async function getPlayerAverages(req, res) {
+  const player = await Player.findOne({
+    $or: [
+      { _id  : req.params.id.match(/^[0-9a-f]{24}$/i) ? req.params.id : null },
+      { slug : req.params.id },
+    ],
+  });
+  if (!player) return fail(res, 404, 'Player not found');
+
+  const windowAverages = await getAllWindowAverages(player._id);
+  ok(res, { playerId: player._id, slug: player.slug, windowAverages });
+}
+
+module.exports = { listPlayers, getPlayer, getPlayerRatings, getPlayerAverages };

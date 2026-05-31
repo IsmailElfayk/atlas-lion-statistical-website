@@ -29,6 +29,21 @@ const ratingSchema = new Schema({
   vaepTotal        : Number,
   normalisedCustom : Number,
 
+  // ── Computed performance score (football-data.org event pipeline) ────────────
+  performanceScore   : { type: Number, min: 0, max: 10, default: null },
+  computedFromEvents : { type: Boolean, default: false },
+  matchEvents: {
+    goals           : { type: Number, default: 0 },
+    assists         : { type: Number, default: 0 },
+    yellowCards     : { type: Number, default: 0 },
+    redCards        : { type: Number, default: 0 },
+    ownGoals        : { type: Number, default: 0 },
+    penaltiesScored : { type: Number, default: 0 },
+    minutesPlayed   : { type: Number, default: 0 },
+    wasStarter      : { type: Boolean, default: false },
+    wasBench        : { type: Boolean, default: false },
+  },
+
   // ── Quality tier ────────────────────────────────────────────────────────────
   dataQuality: {
     type   : String,
